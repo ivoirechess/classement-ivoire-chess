@@ -35,8 +35,95 @@ function statKey(mode) {
   return 'chess_rapid';
 }
 
+function archiveUrl(username, year, month) {
+  const m = String(month).padStart(2, '0');
+  return `${CHESS_API_BASE}/${safeUsername(username)}/games/${year}/${m}`;
+}
+
+/**
+ * Retourne { year, month } pour le mois courant et M-1.
+ */
+function currentAndPrevMonth() {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth() + 1; // 1-12
+  const prevY = m === 1 ? y - 1 : y;
+  const prevM = m === 1 ? 12 : m - 1;
+  return {
+    current: { year: y, month: m },
+    prev: { year: prevY, month: prevM },
+  };
+}
+
+/**
+ * Depuis une liste de parties brutes de l'API Chess.com,
+ * retourne l'Elo du joueur sur la PREMIÈRE partie dans la cadence donnée
+ * (ordre chronologique ascendant → on prend index 0).
+ */
+function firstRatingFromGames(games, username, mode) {
+  const lower = username.toLowerCase();
+  const key = statKey(mode); // 'chess_rapid' | 'chess_blitz' | 'chess_bullet'
+  // time_class: 'rapid' | 'blitz' | 'bullet'
+  const timeClass = key.replace('chess_', '');
+
+  const filtered = games
+    .filter((g) => g.time_class === timeClass)
+    .sort((a, b) => a.end_time - b.end_time); // ascendant
+
+  if (!filtered.length) return null;
+
+  const first = filtered[0];
+  const isWhite = first.white?.username?.toLowerCase() === lower;
+  const side = isWhite ? first.white : first.black;
+  const rating = Number(side?.rating);
+  return Number.isFinite(rating) && rating > 0 ? rating : null;
+}
+
+/**
+ * Récupère les parties d'un mois donné.
+ * Retourne un tableau vide en cas d'erreur (mois sans archive, 404, etc.)
+ */
+async function fetchArchive(username, year, month) {
+  try {
+    const data = await fetchJson(archiveUrl(username, year, month));
+    return data.games || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Calcule l'Elo de référence pour le mois courant :
+ * 1. Première partie du mois courant dans la cadence → référence idéale
+ * 2. Sinon : première partie de M-1 dans la cadence
+ * 3. Sinon : null (joueur considéré inactif sur cette cadence)
+ *
+ * Retourne aussi les parties du mois courant (pour éviter un double appel dans app.js).
+ */
+export async function fetchMonthlyContext(username, mode) {
+  if (!username) return { currentGames: [], referenceRating: null, isInactive: true };
+
+  const { current, prev } = currentAndPrevMonth();
+
+  // On charge le mois courant dans tous les cas (nécessaire pour les parties récentes)
+  const currentGames = await fetchArchive(username, current.year, current.month);
+
+  // Tentative 1 : Elo de la 1ère partie du mois courant
+  let referenceRating = firstRatingFromGames(currentGames, username, mode);
+
+  if (referenceRating === null) {
+    // Tentative 2 : Elo de la 1ère partie de M-1
+    const prevGames = await fetchArchive(username, prev.year, prev.month);
+    referenceRating = firstRatingFromGames(prevGames, username, mode);
+  }
+
+  const isInactive = referenceRating === null;
+
+  return { currentGames, referenceRating, isInactive };
+}
+
 export async function fetchPlayerStats(username, mode) {
-  if (!username) return { rating: 0, games: 0, peakRating: 0, progressToPeak: 0 };
+  if (!username) return { rating: 0, games: 0, referenceRating: null, isInactive: true };
   try {
     const stats = await fetchJson(`${CHESS_API_BASE}/${safeUsername(username)}/stats`);
     const modeStat = stats?.[statKey(mode)] || {};
@@ -44,15 +131,15 @@ export async function fetchPlayerStats(username, mode) {
     const losses = Number(modeStat?.record?.loss || 0);
     const draws = Number(modeStat?.record?.draw || 0);
     const rating = Number(modeStat?.last?.rating || 0);
-    const peakRating = Number(modeStat?.best?.rating || rating || 0);
     return {
       rating,
       games: wins + losses + draws,
-      peakRating,
-      progressToPeak: rating - peakRating,
+      // referenceRating et isInactive sont calculés séparément via fetchMonthlyContext
+      referenceRating: null,
+      isInactive: false,
     };
   } catch {
-    return { rating: 0, games: 0, peakRating: 0, progressToPeak: 0 };
+    return { rating: 0, games: 0, referenceRating: null, isInactive: true };
   }
 }
 
@@ -65,12 +152,6 @@ function inferOpening(game) {
   return game.eco?.includes('/openings/')
     ? game.eco.split('/openings/')[1].replaceAll('-', ' ')
     : parsePgnHeader(game.pgn, 'Opening') || 'Ouverture non disponible';
-}
-
-function monthArchiveUrl(username, date = new Date()) {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-  return `${CHESS_API_BASE}/${safeUsername(username)}/games/${y}/${m}`;
 }
 
 function formatResult(game, username) {
@@ -116,11 +197,19 @@ function extractGames(games, username) {
     });
 }
 
-export async function fetchMonthlyGames(username) {
+/**
+ * Expose les parties du mois courant formatées pour l'affichage dans le modal.
+ * Réutilise currentGames déjà chargées si disponibles, sinon recharge.
+ */
+export async function fetchMonthlyGames(username, preloadedGames = null) {
   if (!username) return [];
   try {
-    const data = await fetchJson(monthArchiveUrl(username));
-    return extractGames(data.games || [], username);
+    let raw = preloadedGames;
+    if (!raw) {
+      const { current } = currentAndPrevMonth();
+      raw = await fetchArchive(username, current.year, current.month);
+    }
+    return extractGames(raw, username);
   } catch {
     return [];
   }
