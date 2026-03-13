@@ -3,68 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <title>Ivoire Chess Club - Classement Live</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="container">
-    <header class="header">
+    <header class="header glass-card">
       <div class="brand">
-        <div class="brand-logo" aria-hidden="true">♞</div>
+        <img class="brand-logo" src="assets/club-logo.svg" alt="Logo Ivoire Chess Club" />
         <div>
           <p class="eyebrow">Ivoire Chess Club</p>
           <h1>Classement live</h1>
+          <p class="subtitle">Le ranking Chess.com temps réel du club</p>
         </div>
       </div>
       <div class="header-actions">
         <p class="live-badge">● Chess.com live</p>
+        <p id="admin-badge" class="admin-badge hidden">Admin connecté</p>
         <button id="refresh-btn" class="btn">Actualiser</button>
-        <button id="admin-toggle-btn" class="btn btn-secondary">Admin</button>
+        <button id="admin-login-btn" class="btn btn-secondary">Connexion admin</button>
+        <button id="logout-btn" class="btn btn-secondary hidden">Déconnexion</button>
       </div>
     </header>
 
-    <section class="card">
+    <section class="card glass-card">
       <div class="toolbar">
-        <div class="tabs" role="tablist" aria-label="Mode de jeu">
-          <button class="tab active" data-mode="rapid">Rapide</button>
-          <button class="tab" data-mode="blitz">Blitz</button>
-          <button class="tab" data-mode="bullet">Bullet</button>
+        <div class="toolbar-start">
+          <div class="tabs" role="tablist" aria-label="Mode de jeu">
+            <button class="tab active" data-mode="rapid">Rapide</button>
+            <button class="tab" data-mode="blitz">Blitz</button>
+            <button class="tab" data-mode="bullet">Bullet</button>
+          </div>
+          <input id="search-input" class="search-input" type="search" placeholder="Rechercher un joueur..." aria-label="Rechercher un joueur" />
         </div>
-        <p id="last-sync">Dernière synchro: -</p>
+        <div class="toolbar-end">
+          <select id="sort-select" class="select-input" aria-label="Trier le classement">
+            <option value="rating_desc">Elo décroissant</option>
+            <option value="rating_asc">Elo croissant</option>
+            <option value="name_asc">Nom A → Z</option>
+          </select>
+          <p id="last-sync">Dernière synchro: -</p>
+        </div>
       </div>
+
       <div id="status" class="status info">Chargement des données...</div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Joueur</th>
-              <th>Pseudo Chess.com</th>
-              <th>Elo</th>
-              <th>Parties</th>
-            </tr>
-          </thead>
-          <tbody id="ranking-body"></tbody>
-        </table>
-      </div>
+      <div id="offline-banner" class="status error hidden">Mode dégradé : problème réseau ou API Chess.com indisponible.</div>
+
+      <section>
+        <h2>Podium</h2>
+        <div id="top-three" class="top-three"></div>
+      </section>
+
+      <section>
+        <h2>Classement</h2>
+        <div class="ranking-head">
+          <span>Joueur</span>
+          <span>Elo courant</span>
+          <span>Pic Elo</span>
+          <span>Progression vs pic</span>
+        </div>
+        <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
+      </section>
     </section>
 
-    <section id="admin-panel" class="card hidden">
+    <section id="admin-panel" class="card glass-card hidden">
       <h2>Panneau admin</h2>
       <div id="admin-status" class="status info">Connectez-vous pour écrire dans Supabase.</div>
-
-      <form id="login-form" class="panel-grid">
-        <label>Email admin
-          <input id="admin-email" type="email" required placeholder="admin@club.com" />
-        </label>
-        <label>Mot de passe
-          <input id="admin-password" type="password" required placeholder="********" />
-        </label>
-        <button class="btn" type="submit">Se connecter</button>
-        <button class="btn btn-secondary" id="logout-btn" type="button">Se déconnecter</button>
-      </form>
-
-      <hr />
 
       <form id="add-player-form" class="panel-grid">
         <label>Username Chess.com
@@ -90,6 +97,47 @@
       <ul id="admin-player-list" class="player-list"></ul>
     </section>
   </main>
+
+  <div id="toast-region" class="toast-region" aria-live="assertive" aria-atomic="true"></div>
+
+  <dialog id="login-modal" class="modal">
+    <form id="login-form" class="modal-content" method="dialog">
+      <div class="modal-header">
+        <h3>Connexion administrateur</h3>
+        <button class="icon-btn" type="button" data-close="login-modal" aria-label="Fermer">✕</button>
+      </div>
+      <p class="modal-sub">Authentification sécurisée Supabase.</p>
+      <label>Email admin
+        <input id="admin-email" type="email" required placeholder="admin@club.com" />
+      </label>
+      <label>Mot de passe
+        <input id="admin-password" type="password" required placeholder="********" />
+      </label>
+      <p id="login-error" class="inline-error hidden"></p>
+      <button id="login-submit-btn" class="btn" type="submit">Se connecter</button>
+    </form>
+  </dialog>
+
+  <dialog id="player-modal" class="modal">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3>Détails joueur</h3>
+        <button class="icon-btn" type="button" data-close="player-modal" aria-label="Fermer">✕</button>
+      </div>
+      <div id="player-modal-body"></div>
+    </div>
+  </dialog>
+
+  <dialog id="confirm-modal" class="modal">
+    <form id="confirm-form" class="modal-content" method="dialog">
+      <h3>Confirmation</h3>
+      <p id="confirm-text"></p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" data-close="confirm-modal">Annuler</button>
+        <button id="confirm-submit-btn" class="btn" type="submit">Confirmer</button>
+      </div>
+    </form>
+  </dialog>
 
   <script type="module" src="app.js"></script>
 </body>
