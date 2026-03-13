@@ -5,31 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <title>Ivoire Chess Club - Classement Live</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <title>Ivoire Chess Club — Classement Live</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="container">
-    <header class="header glass-card">
+
+    <!-- HEADER -->
+    <header class="header">
       <div class="brand">
         <img class="brand-logo" src="assets/club-logo.svg" alt="Logo Ivoire Chess Club" />
         <div>
           <p class="eyebrow">Ivoire Chess Club</p>
-          <h1>Classement live</h1>
-          <p class="subtitle">Le ranking Chess.com temps réel du club</p>
+          <h1>Classement Live</h1>
+          <p class="subtitle">Ranking Chess.com en temps réel</p>
         </div>
       </div>
       <div class="header-actions">
         <p class="live-badge">● Chess.com live</p>
-        <p id="admin-badge" class="admin-badge hidden">Admin connecté</p>
-        <button id="refresh-btn" class="btn">Actualiser</button>
+        <p id="admin-badge" class="admin-badge hidden">⬡ Admin</p>
+        <button id="refresh-btn" class="btn btn-ghost">↻ Actualiser</button>
         <button id="admin-login-btn" class="btn btn-violet">Connexion admin</button>
         <button id="logout-btn" class="btn btn-ghost hidden">Déconnexion</button>
       </div>
     </header>
 
-    <section class="card glass-card">
+    <!-- MAIN CARD -->
+    <section class="card">
       <div class="toolbar">
         <div class="toolbar-start">
           <div class="tabs" role="tablist" aria-label="Mode de jeu">
@@ -37,41 +40,40 @@
             <button class="tab" data-mode="blitz">Blitz</button>
             <button class="tab" data-mode="bullet">Bullet</button>
           </div>
-          <input id="search-input" class="search-input" type="search" placeholder="Rechercher un joueur..." aria-label="Rechercher un joueur" />
+          <input id="search-input" class="search-input" type="search" placeholder="Rechercher un joueur…" aria-label="Rechercher un joueur" />
         </div>
         <div class="toolbar-end">
-          <p class="sort-hint">Tri interactif: cliquez sur les en-têtes de colonnes.</p>
-          <p id="last-sync">Dernière synchro: -</p>
+          <p class="sort-hint">Cliquez sur les colonnes pour trier</p>
+          <p id="last-sync">—</p>
         </div>
       </div>
 
-      <div id="status" class="status info">Chargement des données...</div>
+      <div id="status" class="status info">Chargement des données…</div>
       <div id="offline-banner" class="status error hidden">Mode dégradé : problème réseau ou API Chess.com indisponible.</div>
 
-      <section>
-        <h2>Podium</h2>
-        <div id="top-three" class="top-three"></div>
-      </section>
+      <!-- PODIUM -->
+      <div class="section-label">Podium</div>
+      <div id="top-three" class="top-three"></div>
 
-      <section>
-        <h2>Classement</h2>
-        <div class="ranking-head" role="row">
-          <button type="button" class="sort-head" data-sort="rank" aria-label="Trier par rang">Rang <span class="sort-arrow" aria-hidden="true"></span></button>
-          <button type="button" class="sort-head" data-sort="player" aria-label="Trier par joueur">Joueur <span class="sort-arrow" aria-hidden="true"></span></button>
-          <button type="button" class="sort-head" data-sort="rating" aria-label="Trier par Elo courant">Elo courant <span class="sort-arrow" aria-hidden="true"></span></button>
-          <button type="button" class="sort-head" data-sort="peakRating" aria-label="Trier par pic Elo">Pic elo <span class="sort-arrow" aria-hidden="true"></span></button>
-          <button type="button" class="sort-head" data-sort="progressToPeak" aria-label="Trier par progression">Progression <span class="sort-arrow" aria-hidden="true"></span></button>
-          <button type="button" class="sort-head" data-sort="games" aria-label="Trier par nombre de parties">Parties <span class="sort-arrow" aria-hidden="true"></span></button>
-        </div>
-        <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
-      </section>
+      <!-- RANKING -->
+      <div class="section-label">Classement complet</div>
+      <div class="ranking-head" role="row">
+        <button type="button" class="sort-head" data-sort="rank" aria-label="Trier par rang">Rang <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="player" aria-label="Trier par joueur">Joueur <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="rating" aria-label="Trier par Elo courant">Elo <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="peakRating" aria-label="Trier par pic Elo">Pic <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="progressToPeak" aria-label="Trier par progression">Progr. <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="games" aria-label="Trier par nombre de parties">Parties <span class="sort-arrow" aria-hidden="true"></span></button>
+      </div>
+      <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
     </section>
 
-    <section id="admin-panel" class="card glass-card admin-panel hidden">
+    <!-- ADMIN PANEL -->
+    <section id="admin-panel" class="card admin-panel hidden">
       <button id="admin-toggle" class="admin-toggle" type="button" aria-expanded="true">
         <span>
-          <strong>Panneau admin</strong>
-          <small>Gestion des joueurs et paramètres</small>
+          <strong>Panneau administrateur</strong>
+          <small>Gestion des joueurs et paramètres du classement</small>
         </span>
         <span id="admin-toggle-icon" class="toggle-icon">▾</span>
       </button>
@@ -81,64 +83,69 @@
 
         <form id="add-player-form" class="panel-grid">
           <label>Username Chess.com
-            <input id="player-username" type="text" required placeholder="magnuscarlsen" />
+            <input id="player-username" type="text" required placeholder="magnuscarlsen" autocomplete="off" />
           </label>
           <label>Nom affiché
-            <input id="player-display-name" type="text" required placeholder="Magnus Carlsen" />
+            <input id="player-display-name" type="text" required placeholder="Magnus Carlsen" autocomplete="off" />
           </label>
           <label>Club
-            <input id="player-club" type="text" value="Ivoire Chess Club" />
+            <input id="player-club" type="text" value="Ivoire Chess Club" autocomplete="off" />
           </label>
-          <button class="btn" type="submit">Ajouter un joueur</button>
+          <button class="btn" type="submit">+ Ajouter</button>
         </form>
 
         <form id="top-limit-form" class="panel-inline">
           <label>Top limit partagé
-            <input id="top-limit-input" type="number" min="1" max="100" required />
+            <input id="top-limit-input" type="number" min="1" max="100" required style="width:90px;" />
           </label>
           <button class="btn btn-violet" type="submit">Mettre à jour</button>
         </form>
 
-        <h3>Gestion des joueurs</h3>
+        <h3>Joueurs actifs</h3>
         <ul id="admin-player-list" class="player-list"></ul>
       </div>
     </section>
+
   </main>
 
+  <!-- TOASTS -->
   <div id="toast-region" class="toast-region" aria-live="assertive" aria-atomic="true"></div>
 
+  <!-- LOGIN MODAL -->
   <dialog id="login-modal" class="modal">
     <form id="login-form" class="modal-content" method="dialog">
       <div class="modal-header">
         <h3>Connexion administrateur</h3>
         <button class="icon-btn" type="button" data-close="login-modal" aria-label="Fermer">✕</button>
       </div>
-      <p class="modal-sub">Authentification sécurisée Supabase.</p>
-      <label>Email admin
-        <input id="admin-email" type="email" required placeholder="admin@club.com" />
+      <p class="modal-sub">Authentification sécurisée via Supabase Auth.</p>
+      <label style="margin-bottom:12px;">Email
+        <input id="admin-email" type="email" required placeholder="admin@club.com" autocomplete="email" />
       </label>
       <label>Mot de passe
-        <input id="admin-password" type="password" required placeholder="********" />
+        <input id="admin-password" type="password" required placeholder="••••••••" autocomplete="current-password" />
       </label>
       <p id="login-error" class="inline-error hidden"></p>
-      <button id="login-submit-btn" class="btn" type="submit">Se connecter</button>
+      <button id="login-submit-btn" class="btn btn-violet" type="submit">Se connecter</button>
     </form>
   </dialog>
 
-  <dialog id="player-modal" class="modal">
-    <div class="modal-content modal-large">
+  <!-- PLAYER MODAL -->
+  <dialog id="player-modal" class="modal modal-large">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Détails joueur</h3>
+        <h3>Profil joueur</h3>
         <button class="icon-btn" type="button" data-close="player-modal" aria-label="Fermer">✕</button>
       </div>
       <div id="player-modal-body"></div>
     </div>
   </dialog>
 
+  <!-- CONFIRM MODAL -->
   <dialog id="confirm-modal" class="modal">
     <form id="confirm-form" class="modal-content" method="dialog">
-      <h3>Confirmation</h3>
-      <p id="confirm-text"></p>
+      <h3 style="margin-bottom:12px;">Confirmation</h3>
+      <p id="confirm-text" style="color:var(--text-2);font-size:14px;margin-bottom:4px;"></p>
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" data-close="confirm-modal">Annuler</button>
         <button id="confirm-submit-btn" class="btn" type="submit">Confirmer</button>
