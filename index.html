@@ -90,6 +90,12 @@ header{
 
 /* ── TABLE ── */
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.table-wrap.cards .t-head{display:none;}
+.table-wrap.cards #rows{display:grid;gap:10px;padding:10px;}
+.table-wrap.cards .t-row{display:block;height:auto;padding:12px;border:1px solid var(--border2);border-radius:10px;background:rgba(255,255,255,.02);}
+.table-wrap.cards .rank-c{justify-content:flex-start;margin-bottom:8px;}
+.table-wrap.cards .player-c{margin-bottom:8px;}
+.table-wrap.cards .elo-c,.table-wrap.cards .peak-c,.table-wrap.cards .trend-c{text-align:left;margin-top:6px;}
 .t-head{
   display:grid;
   grid-template-columns:52px 1fr 110px 110px 90px 100px;
@@ -232,10 +238,10 @@ header{
   color:var(--orange-light);}
 .field label{display:block;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
   color:var(--text3);margin-bottom:6px;}
-.field input{width:100%;padding:9px 13px;background:var(--bg3);border:1px solid var(--border);
+.field input,.field select{width:100%;padding:9px 13px;background:var(--bg3);border:1px solid var(--border);
   border-radius:6px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--text);outline:none;
   transition:border-color .15s;}
-.field input:focus{border-color:var(--green);}
+.field input:focus,.field select:focus{border-color:var(--green);}
 .field{margin-bottom:13px;}
 .adm-btn{width:100%;padding:10px;background:var(--orange);border:none;border-radius:6px;
   font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:.1em;cursor:pointer;
@@ -274,23 +280,45 @@ header{
 .club-ribbon{margin:-8px 0 22px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(0,0,0,.2));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .club-ribbon .stripes{display:flex;gap:8px;align-items:center;}
 .club-ribbon .stripe{width:48px;height:8px;border-radius:999px;box-shadow:0 0 8px rgba(255,255,255,.15)}
-.club-ribbon .stripe.green{background:var(--green);} 
-.club-ribbon .stripe.ivory{background:#fffdf7;} 
-.club-ribbon .stripe.orange{background:var(--orange);} 
+.club-ribbon .stripe.green{background:var(--green);}
+.club-ribbon .stripe.ivory{background:#fffdf7;}
+.club-ribbon .stripe.orange{background:var(--orange);}
 .club-ribbon .txt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);font-weight:600;}
 .btn-admin.admin-on{background:rgba(30,140,69,.2);border-color:var(--green);color:#d5ffe4;}
-.btn-admin.admin-on:hover{background:rgba(30,140,69,.3);} 
+.btn-admin.admin-on:hover{background:rgba(30,140,69,.3);}
 .admin-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
 .admin-hint{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.35;}
+.top-limit-note{font-size:10px;color:var(--text3);margin-top:6px;letter-spacing:.05em;}
+.admin-toolbar{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:-8px 0 14px;padding:10px;border:1px solid var(--border);border-radius:10px;background:rgba(30,140,69,.08);}
+.admin-toolbar.show{display:flex;}
+.admin-chip{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--green-light);border:1px solid rgba(30,140,69,.4);padding:5px 8px;border-radius:999px;}
+.admin-opt-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;}
+.admin-opt-btn:hover{border-color:var(--green);color:var(--text);}
+.admin-panel-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.adm-tab{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;}
+.adm-tab.active{background:rgba(30,140,69,.18);border-color:var(--green);color:var(--green-light);}
+.admin-section{display:none;}
+.admin-section.active{display:block;}
 
 /* row animation */
 @keyframes rowIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}
 .t-row{animation:rowIn .25s ease both;}
 
 @media(max-width:680px){
-  .t-head,.t-row{grid-template-columns:44px 1fr 90px 80px;}
+  .t-head,.t-row{grid-template-columns:36px minmax(0,1fr) 72px 62px;padding-left:10px;padding-right:10px;}
   .col-peak,.col-trend{display:none;}
+  .player-c{gap:8px;}
+  .avatar{width:30px;height:30px;}
+  .p-name{font-size:12px;}
+  .p-link{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .elo-val{font-size:20px;}
+  .elo-lbl{font-size:8px;letter-spacing:.08em;}
+  .t-head{position:sticky;top:0;z-index:5;backdrop-filter:blur(4px);}
+  .admin-toolbar{padding:8px;}
+  .admin-opt-btn{width:100%;}
 }
+
+
 </style>
 </head>
 <body>
@@ -309,7 +337,7 @@ header{
       <div class="s-dot"></div>
       Chess.com &nbsp;·&nbsp; <span id="upd-time">—</span>
     </div>
-    <button class="btn-admin" id="admin-btn" onclick="openAdminGate()">🔒 Admin</button>
+    <button class="btn-admin" id="admin-btn" >🔒 Admin</button>
   </div>
 </header>
 
@@ -322,13 +350,20 @@ header{
 
 <div class="controls">
   <div class="tabs" id="tabs">
-    <button class="tab active" data-mode="rapid"  onclick="switchMode('rapid')"><span class="tdot"></span>Rapide</button>
-    <button class="tab"        data-mode="blitz"  onclick="switchMode('blitz')"><span class="tdot"></span>Blitz</button>
-    <button class="tab"        data-mode="bullet" onclick="switchMode('bullet')"><span class="tdot"></span>Bullet</button>
+    <button class="tab active" data-mode="rapid"  ><span class="tdot"></span>Rapide</button>
+    <button class="tab"        data-mode="blitz"  ><span class="tdot"></span>Blitz</button>
+    <button class="tab"        data-mode="bullet" ><span class="tdot"></span>Bullet</button>
   </div>
-  <button class="refresh-btn" id="ref-btn" onclick="refreshData()">
+  <button class="refresh-btn" id="ref-btn" >
     <span class="spin">↻</span> Actualiser
   </button>
+  <button class="refresh-btn" id="card-toggle-btn" style="display:none">☷ Mode cartes</button>
+</div>
+
+<div class="admin-toolbar" id="admin-toolbar">
+  <span class="admin-chip">Mode admin actif</span>
+  <button class="admin-opt-btn" data-open-admin="players">Joueurs</button>
+  <button class="admin-opt-btn" data-open-admin="top">Top</button>
 </div>
 
 <div class="table-wrap" id="table-wrap">
@@ -353,7 +388,7 @@ header{
 <!-- PLAYER MODAL -->
 <div class="modal-bg" id="modal-player">
   <div class="modal">
-    <button class="mc" onclick="closeModal('modal-player')">✕</button>
+    <button class="mc" data-close-modal="modal-player">✕</button>
     <div id="pm-content"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 </div>
@@ -361,45 +396,68 @@ header{
 <!-- ADMIN LOGIN -->
 <div class="modal-bg" id="modal-login">
   <div class="modal" style="max-width:360px">
-    <button class="mc" onclick="closeModal('modal-login')">✕</button>
+    <button class="mc" data-close-modal="modal-login">✕</button>
     <div class="adm-modal" style="border:none;padding:0;background:none;width:100%">
       <h2>🔒 Administration</h2>
       <div class="err" id="login-err">Mot de passe incorrect.</div>
       <div class="field">
         <label>Mot de passe</label>
-        <input type="password" id="pwd-in" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+        <input type="password" id="pwd-in" placeholder="••••••••" />
       </div>
-      <button class="adm-btn" onclick="doLogin()">Connexion</button>
+      <button class="adm-btn" id="login-btn">Connexion</button>
     </div>
   </div>
 </div>
 
 <!-- ADMIN PANEL -->
 <div class="modal-bg" id="modal-admin">
-  <div class="modal" style="max-width:500px">
-    <button class="mc" onclick="closeModal('modal-admin')">✕</button>
+  <div class="modal" style="max-width:560px">
+    <button class="mc" data-close-modal="modal-admin">✕</button>
     <div class="adm-modal" style="border:none;padding:0;background:none;width:100%">
-      <h2>🛠 Gestion des joueurs</h2>
-      <div id="players-list" class="players-grid"></div>
-      <div class="field">
-        <label>Ajouter un joueur (pseudo Chess.com)</label>
-        <input type="text" id="add-player-input" placeholder="ex: Magnus_Carlsen" onkeydown="if(event.key==='Enter')addPlayer()"/>
+      <h2>🛠 Outils administrateur</h2>
+      <div class="admin-panel-tabs">
+        <button class="adm-tab" data-admin-tab="players">Joueurs</button>
+        <button class="adm-tab" data-admin-tab="top">Top</button>
       </div>
-      <button class="adm-btn green" onclick="addPlayer()">+ Ajouter par pseudo</button>
-      <div class="admin-hint">Ajoute un membre en collant son pseudo Chess.com (ou son lien profil).</div>
+
+      <div class="admin-section" id="admin-sec-players">
+        <div id="players-list" class="players-grid"></div>
+        <div class="field">
+          <label>Ajouter un joueur (pseudo Chess.com)</label>
+          <input type="text" id="add-player-input" placeholder="ex: Magnus_Carlsen" />
+        </div>
+        <button class="adm-btn green" id="add-player-btn">+ Ajouter par pseudo</button>
+        <div class="admin-hint">Ajoute un membre via pseudo ou lien Chess.com.</div>
+        <button class="adm-btn" id="export-players-btn" style="background:var(--bg4);border:1px solid var(--border);color:var(--text2)">Exporter joueurs JSON</button>
+      </div>
+
+      <div class="admin-section" id="admin-sec-top">
+        <div class="field">
+          <label>Seuil du classement affiché</label>
+          <select id="top-limit-select" >
+            <option value="3">Top 3</option><option value="5">Top 5</option><option value="10">Top 10</option><option value="15">Top 15</option>
+            <option value="20">Top 20</option><option value="25">Top 25</option><option value="30">Top 30</option><option value="full">Full</option>
+          </select>
+          <div class="top-limit-note">Seuil global pour Rapide/Blitz/Bullet.</div>
+        </div>
+      </div>
+
+
+
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
         <div class="field">
           <label>Changer le mot de passe</label>
           <input type="password" id="new-pwd" placeholder="Nouveau mot de passe"/>
         </div>
         <div class="admin-actions">
-          <button class="adm-btn" onclick="changePwd()" style="background:var(--bg4);border:1px solid var(--border);color:var(--text2)">Changer le mot de passe</button>
-          <button class="adm-btn" onclick="logoutAdmin()" style="background:rgba(232,96,32,.15);border:1px solid rgba(232,96,32,.35);color:var(--orange-light)">Quitter mode admin</button>
+          <button class="adm-btn" id="change-pwd-btn" style="background:var(--bg4);border:1px solid var(--border);color:var(--text2)">Changer le mot de passe</button>
+          <button class="adm-btn" id="logout-admin-btn" style="background:rgba(232,96,32,.15);border:1px solid rgba(232,96,32,.35);color:var(--orange-light)">Quitter mode admin</button>
         </div>
       </div>
     </div>
   </div>
 </div>
+
 
 <script>
 // ═══════════════════════════════
@@ -410,6 +468,7 @@ function loadState(){
   try{ const d=localStorage.getItem(SK); if(d) return JSON.parse(d); }catch(e){}
   return {
     password: 'admin123',
+    topLimit: '20',
     players: [
       {username:'elfirouj225',displayName:'Elfirouj225'},
       {username:'ivoirechess',displayName:'IvoireChess'},
@@ -444,7 +503,25 @@ function loadState(){
   };
 }
 let S = loadState();
+if(!S.topLimit) S.topLimit = '20';
+if(typeof S.playersCustomized !== 'boolean') S.playersCustomized = false;
 function saveState(){ localStorage.setItem(SK, JSON.stringify(S)); }
+
+async function fetchProjectJson(path){
+  try{
+    const r = await fetch(path, {cache:'no-store'});
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+async function syncProjectData(){
+  const projectPlayers = await fetchProjectJson('data/players.json');
+  if(Array.isArray(projectPlayers) && projectPlayers.length && !S.playersCustomized){
+    S.players = projectPlayers;
+  }
+  saveState();
+}
 
 // ═══════════════════════════════
 //  CHESS.COM API
@@ -454,7 +531,23 @@ let currentMode = 'rapid';
 let cache = {};
 let isLoading = false;
 
-async function fetchPlayerStats(p){
+function getCached(map, key){
+  const entry = map.get(key);
+  if(!entry) return null;
+  if(Date.now() - entry.ts > API_TTL_MS){ map.delete(key); return null; }
+  return entry.value;
+}
+
+function setCached(map, key, value){
+  map.set(key, {value, ts: Date.now()});
+}
+
+async function fetchPlayerStats(p, force=false){
+  const cacheKey = p.username;
+  if(!force){
+    const hit = getCached(apiCache.stats, cacheKey);
+    if(hit) return hit;
+  }
   const url = `https://api.chess.com/pub/player/${p.username}/stats`;
   try{
     const r = await fetch(url, {headers:{Accept:'application/json'}});
@@ -472,20 +565,33 @@ async function fetchPlayerStats(p){
         ratings[mode] = {elo:null, peak:null, games:0};
       }
     }
-    return {...p, username:d.username?.toLowerCase()||p.username, displayName:d.username||p.displayName||p.username, ratings};
+    const out = {...p, username:d.username?.toLowerCase()||p.username, displayName:d.username||p.displayName||p.username, ratings};
+    setCached(apiCache.stats, cacheKey, out);
+    return out;
   }catch(e){ return {...p, ratings:{}}; }
 }
 
-async function fetchAvatar(username){
+async function fetchAvatar(username, force=false){
+  if(!force){
+    const hit = getCached(apiCache.avatar, username);
+    if(hit !== null) return hit;
+  }
   try{
     const r = await fetch(`https://api.chess.com/pub/player/${username}`);
     if(!r.ok) return null;
     const d = await r.json();
-    return d.avatar || null;
+    const avatar = d.avatar || null;
+    setCached(apiCache.avatar, username, avatar);
+    return avatar;
   }catch(e){ return null; }
 }
 
-async function fetchRecentGames(username, mode){
+async function fetchRecentGames(username, mode, force=false){
+  const key = `${username}:${mode}`;
+  if(!force){
+    const hit = getCached(apiCache.games, key);
+    if(hit) return hit;
+  }
   try{
     const now = new Date();
     const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
@@ -494,19 +600,20 @@ async function fetchRecentGames(username, mode){
     if(!r.ok) return [];
     const d = await r.json();
     const modeFilter = mode === 'rapid' ? 'rapid' : mode === 'blitz' ? 'blitz' : 'bullet';
-    return (d.games||[]).filter(g=>g.time_class===modeFilter).slice(-10).reverse();
+    const games = (d.games||[]).filter(g=>g.time_class===modeFilter).slice(-10).reverse();
+    setCached(apiCache.games, key, games);
+    return games;
   }catch(e){ return []; }
 }
 
-async function refreshData(){
+async function refreshData(force=false){
   if(isLoading) return;
   isLoading = true;
   const btn = document.getElementById('ref-btn');
   btn.disabled = true; btn.classList.add('spinning');
   document.getElementById('loading').style.display = 'block';
-  document.getElementById('rows').innerHTML = '';
 
-  const results = await Promise.all(S.players.map(fetchPlayerStats));
+  const results = await Promise.all(S.players.map(p => fetchPlayerStats(p, force)));
   cache = {};
   results.forEach(p => { cache[p.username] = p; });
 
@@ -516,7 +623,6 @@ async function refreshData(){
   renderTable();
   updateTs();
 
-  // Load avatars async
   results.forEach(p => loadAvatar(p.username));
 }
 
@@ -538,7 +644,7 @@ function renderTable(){
   const sorted = all
     .filter(p => p.ratings[currentMode]?.elo != null)
     .sort((a,b) => b.ratings[currentMode].elo - a.ratings[currentMode].elo)
-    .slice(0,20);
+    .slice(0, getTopLimitValue());
 
   sorted.forEach((p, i) => {
     const rank = i+1;
@@ -560,7 +666,7 @@ function renderTable(){
     row.className = `t-row${rank<=3?' rank-'+rank:''}`;
     row.style.animationDelay = `${i*25}ms`;
     const avatarCell = p.avatar
-      ? `<img src="${p.avatar}" alt="${p.username}" onerror="this.parentElement.innerHTML='${initials}'">`
+      ? `<img src="${p.avatar}" alt="${p.username}">`
       : initials;
 
     row.innerHTML = `
@@ -602,7 +708,7 @@ async function loadAvatar(username){
   const av = await fetchAvatar(username);
   if(av){
     const el = document.getElementById('av-'+username);
-    if(el) el.innerHTML = `<img src="${av}" alt="${username}" onerror="this.parentElement.innerHTML='${(username).slice(0,2).toUpperCase()}'">`;
+    if(el) el.innerHTML = `<img src="${av}" alt="${username}">`;
     // Also store for modal
     if(cache[username]) cache[username].avatar = av;
   }
@@ -612,6 +718,24 @@ function switchMode(mode){
   currentMode = mode;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
   renderTable();
+}
+
+function getTopLimitValue(){
+  if(S.topLimit === 'full') return Number.MAX_SAFE_INTEGER;
+  const parsed = Number.parseInt(S.topLimit, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
+}
+
+function syncTopLimitSelect(){
+  const sel = document.getElementById('top-limit-select');
+  if(sel) sel.value = S.topLimit || '20';
+}
+
+function updateTopLimit(value){
+  S.topLimit = value;
+  saveState();
+  renderTable();
+  showNotif(`Seuil classement: ${value==='full' ? 'Full' : `Top ${value}`}`);
 }
 
 // ═══════════════════════════════
@@ -732,12 +856,18 @@ async function openPlayerModal(username){
 // ═══════════════════════════════
 let isAdmin = false;
 let selectedAdminPlayer = null;
+let activeAdminSection = 'players';
+const API_TTL_MS = 2 * 60 * 1000;
+const apiCache = {stats:new Map(), avatar:new Map(), games:new Map()};
 
 function updateAdminButton(){
   const b = document.getElementById('admin-btn');
   if(!b) return;
   b.classList.toggle('admin-on', isAdmin);
   b.textContent = isAdmin ? '🟢 Mode admin' : '🔒 Admin';
+
+  const toolbar = document.getElementById('admin-toolbar');
+  if(toolbar) toolbar.classList.toggle('show', isAdmin);
 }
 
 function normalizeUsername(input){
@@ -747,22 +877,14 @@ function normalizeUsername(input){
   return value.trim().toLowerCase().replace(/^@/,'').replace(/\s+/g,'_');
 }
 
-function updateAdminButton(){
-  const b = document.getElementById('admin-btn');
-  if(!b) return;
-  b.classList.toggle('admin-on', isAdmin);
-  b.textContent = isAdmin ? '🟢 Mode admin' : '🔒 Admin';
-}
-
-function normalizeUsername(input){
-  if(!input) return '';
-  const fromUrl = input.match(/chess\.com\/(?:fr\/)?member\/([a-zA-Z0-9_-]+)/i);
-  const value = fromUrl ? fromUrl[1] : input;
-  return value.trim().toLowerCase().replace(/^@/,'').replace(/\s+/g,'_');
+function setAdminSection(section){
+  activeAdminSection = section;
+  document.querySelectorAll('.admin-section').forEach(sec => sec.classList.toggle('active', sec.id === `admin-sec-${section}`));
+  document.querySelectorAll('.adm-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.adminTab === section));
 }
 
 function openAdminGate(){
-  if(isAdmin){ openAdminPanel(); return; }
+  if(isAdmin){ openAdminPanel(activeAdminSection); return; }
   document.getElementById('pwd-in').value='';
   document.getElementById('login-err').classList.remove('show');
   openModal('modal-login');
@@ -773,7 +895,7 @@ function doLogin(){
     isAdmin = true;
     updateAdminButton();
     closeModal('modal-login');
-    openAdminPanel();
+    openAdminPanel('players');
   } else {
     document.getElementById('login-err').classList.add('show');
   }
@@ -786,9 +908,11 @@ function logoutAdmin(){
   showNotif('Mode admin désactivé');
 }
 
-function openAdminPanel(){
+function openAdminPanel(section='players'){
   selectedAdminPlayer = null;
+  syncTopLimitSelect();
   renderPlayersList();
+  setAdminSection(section);
   openModal('modal-admin');
 }
 
@@ -799,13 +923,14 @@ function selectAdminPlayer(username){
 
 function renderPlayersList(){
   const cont = document.getElementById('players-list');
+  if(!cont) return;
   cont.innerHTML = S.players.map((p,i) => `
-    <div class="player-item ${selectedAdminPlayer===p.username?'selected':''}" onclick="selectAdminPlayer('${p.username}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectAdminPlayer('${p.username}')">
+    <div class="player-item ${selectedAdminPlayer===p.username?'selected':''}" data-select-player="${p.username}" role="button" tabindex="0">
       <span class="pi-idx">${i+1}</span>
       <span class="pi-name">${p.displayName} <span style="color:var(--text3);font-size:11px">(${p.username})</span></span>
       <span class="pi-del" title="Sélectionner">⋯</span>
     </div>
-    ${selectedAdminPlayer===p.username ? `<div class="pi-actions"><button class="pi-del-opt" onclick="event.stopPropagation();removePlayer('${p.username}')">Supprimer ce joueur</button></div>` : ''}`
+    ${selectedAdminPlayer===p.username ? `<div class="pi-actions"><button class="pi-del-opt" data-remove-player="${p.username}">Supprimer ce joueur</button></div>` : ''}`
   ).join('');
 }
 
@@ -814,6 +939,7 @@ function removePlayer(username){
   if(!p) return;
   if(!confirm(`Supprimer ${p.displayName} (${p.username}) ?`)) return;
   S.players = S.players.filter(p => p.username !== username);
+  S.playersCustomized = true;
   saveState();
   delete cache[username];
   selectedAdminPlayer = null;
@@ -832,7 +958,6 @@ async function addPlayer(){
     showNotif('⚠ Joueur déjà dans la liste'); return;
   }
   showNotif('⏳ Vérification…');
-  // Verify player exists on Chess.com
   const data = await fetchPlayerStats({username, displayName: raw});
   if(!data.ratings || Object.values(data.ratings).every(r=>r.elo===null)){
     showNotif('❌ Joueur introuvable sur Chess.com');
@@ -840,6 +965,7 @@ async function addPlayer(){
   }
   const displayName = data.displayName || data.username || raw;
   S.players.push({username, displayName});
+  S.playersCustomized = true;
   saveState();
   cache[username] = data;
   loadAvatar(username);
@@ -847,6 +973,18 @@ async function addPlayer(){
   renderTable();
   input.value = '';
   showNotif(`✓ ${displayName} ajouté !`);
+}
+
+function exportPlayersJson(){
+  const payload = S.players;
+  const filename = 'players.json';
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showNotif(`⬇ ${filename} exporté`);
 }
 
 function changePwd(){
@@ -875,9 +1013,56 @@ function showNotif(msg){
 // Auto-refresh 5min
 setInterval(()=>{ if(!isLoading) refreshData(); }, 5*60*1000);
 
+function bindUIEvents(){
+  document.getElementById('admin-btn')?.addEventListener('click', openAdminGate);
+  document.getElementById('ref-btn')?.addEventListener('click', () => refreshData(true));
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => switchMode(b.dataset.mode)));
+  document.querySelectorAll('[data-open-admin]').forEach(b => b.addEventListener('click', () => openAdminPanel(b.dataset.openAdmin)));
+  document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => closeModal(b.dataset.closeModal)));
+  document.getElementById('login-btn')?.addEventListener('click', doLogin);
+  document.getElementById('pwd-in')?.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.querySelectorAll('.adm-tab').forEach(b => b.addEventListener('click', () => setAdminSection(b.dataset.adminTab)));
+  document.getElementById('add-player-btn')?.addEventListener('click', addPlayer);
+  document.getElementById('add-player-input')?.addEventListener('keydown', e => { if(e.key==='Enter') addPlayer(); });
+  document.getElementById('export-players-btn')?.addEventListener('click', exportPlayersJson);
+  document.getElementById('change-pwd-btn')?.addEventListener('click', changePwd);
+  document.getElementById('logout-admin-btn')?.addEventListener('click', logoutAdmin);
+  document.getElementById('top-limit-select')?.addEventListener('change', e => updateTopLimit(e.target.value));
+
+  const playersList = document.getElementById('players-list');
+  playersList?.addEventListener('click', e => {
+    const removeBtn = e.target.closest('[data-remove-player]');
+    if(removeBtn){ e.stopPropagation(); removePlayer(removeBtn.dataset.removePlayer); return; }
+    const item = e.target.closest('[data-select-player]');
+    if(item) selectAdminPlayer(item.dataset.selectPlayer);
+  });
+  playersList?.addEventListener('keydown', e => {
+    const item = e.target.closest('[data-select-player]');
+    if(item && e.key==='Enter') selectAdminPlayer(item.dataset.selectPlayer);
+  });
+
+  const cardBtn = document.getElementById('card-toggle-btn');
+  const tableWrap = document.getElementById('table-wrap');
+  const syncCardBtn = () => {
+    const mobile = window.matchMedia('(max-width:680px)').matches;
+    cardBtn.style.display = mobile ? 'inline-flex' : 'none';
+    if(!mobile) tableWrap.classList.remove('cards');
+  };
+  cardBtn?.addEventListener('click', () => {
+    tableWrap.classList.toggle('cards');
+    cardBtn.textContent = tableWrap.classList.contains('cards') ? '☰ Mode tableau' : '☷ Mode cartes';
+  });
+  window.addEventListener('resize', syncCardBtn);
+  syncCardBtn();
+}
+
 // Init
-updateAdminButton();
-refreshData();
+(async function init(){
+  bindUIEvents();
+  await syncProjectData();
+  updateAdminButton();
+  refreshData(true);
+})();
 </script>
 </body>
 </html>
