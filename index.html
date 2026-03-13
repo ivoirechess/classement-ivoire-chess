@@ -251,11 +251,18 @@ header{
 .players-grid{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto;margin-bottom:14px;}
 .player-item{display:flex;align-items:center;gap:10px;padding:8px 12px;
   background:var(--bg3);border-radius:6px;font-size:13px;font-weight:500;}
+.player-item{cursor:pointer;transition:background .15s,border-color .15s; border:1px solid transparent;}
+.player-item:hover{background:var(--bg4);}
+.player-item.selected{border-color:rgba(232,96,32,.45);background:rgba(232,96,32,.1);}
 .pi-idx{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);width:20px;}
 .pi-name{flex:1;}
 .pi-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:2px 6px;
   border-radius:4px;transition:all .12s;}
 .pi-del:hover{background:rgba(232,96,32,.15);color:var(--orange-light);}
+.pi-actions{display:flex;justify-content:flex-end;margin:-2px 0 6px;}
+.pi-del-opt{background:rgba(232,96,32,.18);border:1px solid rgba(232,96,32,.45);color:var(--orange-light);
+  padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+.pi-del-opt:hover{background:rgba(232,96,32,.26);}
 
 /* notif */
 .notif{position:fixed;bottom:22px;right:22px;background:var(--green-dark);border:1px solid var(--green);
@@ -552,12 +559,16 @@ function renderTable(){
     const row = document.createElement('div');
     row.className = `t-row${rank<=3?' rank-'+rank:''}`;
     row.style.animationDelay = `${i*25}ms`;
+    const avatarCell = p.avatar
+      ? `<img src="${p.avatar}" alt="${p.username}" onerror="this.parentElement.innerHTML='${initials}'">`
+      : initials;
+
     row.innerHTML = `
       <div class="rank-c">
         ${rank<=3 ? `<span class="medal">${MEDALS[rank-1]}</span>` : `<span class="rank-n">${rank}</span>`}
       </div>
       <div class="player-c">
-        <div class="avatar" id="av-${p.username}">${initials}</div>
+        <div class="avatar" id="av-${p.username}">${avatarCell}</div>
         <div>
           <div class="p-name">${p.displayName||p.username}</div>
           <div class="p-link">chess.com/${p.username}</div>
@@ -578,6 +589,8 @@ function renderTable(){
 
     row.addEventListener('click', () => openPlayerModal(p.username));
     cont.appendChild(row);
+
+    if(!p.avatar) loadAvatar(p.username);
   });
 
   if(sorted.length === 0){
@@ -718,6 +731,21 @@ async function openPlayerModal(username){
 //  ADMIN
 // ═══════════════════════════════
 let isAdmin = false;
+let selectedAdminPlayer = null;
+
+function updateAdminButton(){
+  const b = document.getElementById('admin-btn');
+  if(!b) return;
+  b.classList.toggle('admin-on', isAdmin);
+  b.textContent = isAdmin ? '🟢 Mode admin' : '🔒 Admin';
+}
+
+function normalizeUsername(input){
+  if(!input) return '';
+  const fromUrl = input.match(/chess\.com\/(?:fr\/)?member\/([a-zA-Z0-9_-]+)/i);
+  const value = fromUrl ? fromUrl[1] : input;
+  return value.trim().toLowerCase().replace(/^@/,'').replace(/\s+/g,'_');
+}
 
 function updateAdminButton(){
   const b = document.getElementById('admin-btn');
@@ -759,24 +787,36 @@ function logoutAdmin(){
 }
 
 function openAdminPanel(){
+  selectedAdminPlayer = null;
   renderPlayersList();
   openModal('modal-admin');
+}
+
+function selectAdminPlayer(username){
+  selectedAdminPlayer = selectedAdminPlayer === username ? null : username;
+  renderPlayersList();
 }
 
 function renderPlayersList(){
   const cont = document.getElementById('players-list');
   cont.innerHTML = S.players.map((p,i) => `
-    <div class="player-item">
+    <div class="player-item ${selectedAdminPlayer===p.username?'selected':''}" onclick="selectAdminPlayer('${p.username}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectAdminPlayer('${p.username}')">
       <span class="pi-idx">${i+1}</span>
       <span class="pi-name">${p.displayName} <span style="color:var(--text3);font-size:11px">(${p.username})</span></span>
-      <button class="pi-del" onclick="removePlayer('${p.username}')" title="Retirer">✕</button>
-    </div>`).join('');
+      <span class="pi-del" title="Sélectionner">⋯</span>
+    </div>
+    ${selectedAdminPlayer===p.username ? `<div class="pi-actions"><button class="pi-del-opt" onclick="event.stopPropagation();removePlayer('${p.username}')">Supprimer ce joueur</button></div>` : ''}`
+  ).join('');
 }
 
 function removePlayer(username){
+  const p = S.players.find(pl => pl.username === username);
+  if(!p) return;
+  if(!confirm(`Supprimer ${p.displayName} (${p.username}) ?`)) return;
   S.players = S.players.filter(p => p.username !== username);
   saveState();
   delete cache[username];
+  selectedAdminPlayer = null;
   renderPlayersList();
   renderTable();
   showNotif(`✓ ${username} retiré`);
