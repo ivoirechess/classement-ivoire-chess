@@ -24,8 +24,8 @@
         <p class="live-badge">● Chess.com live</p>
         <p id="admin-badge" class="admin-badge hidden">Admin connecté</p>
         <button id="refresh-btn" class="btn">Actualiser</button>
-        <button id="admin-login-btn" class="btn btn-secondary">Connexion admin</button>
-        <button id="logout-btn" class="btn btn-secondary hidden">Déconnexion</button>
+        <button id="admin-login-btn" class="btn btn-violet">Connexion admin</button>
+        <button id="logout-btn" class="btn btn-ghost hidden">Déconnexion</button>
       </div>
     </header>
 
@@ -40,11 +40,7 @@
           <input id="search-input" class="search-input" type="search" placeholder="Rechercher un joueur..." aria-label="Rechercher un joueur" />
         </div>
         <div class="toolbar-end">
-          <select id="sort-select" class="select-input" aria-label="Trier le classement">
-            <option value="rating_desc">Elo décroissant</option>
-            <option value="rating_asc">Elo croissant</option>
-            <option value="name_asc">Nom A → Z</option>
-          </select>
+          <p class="sort-hint">Tri interactif: cliquez sur les en-têtes de colonnes.</p>
           <p id="last-sync">Dernière synchro: -</p>
         </div>
       </div>
@@ -59,42 +55,53 @@
 
       <section>
         <h2>Classement</h2>
-        <div class="ranking-head">
-          <span>Joueur</span>
-          <span>Elo courant</span>
-          <span>Pic Elo</span>
-          <span>Progression vs pic</span>
+        <div class="ranking-head" role="row">
+          <button type="button" class="sort-head" data-sort="rank" aria-label="Trier par rang">Rang <span class="sort-arrow" aria-hidden="true"></span></button>
+          <button type="button" class="sort-head" data-sort="player" aria-label="Trier par joueur">Joueur <span class="sort-arrow" aria-hidden="true"></span></button>
+          <button type="button" class="sort-head" data-sort="rating" aria-label="Trier par Elo courant">Elo courant <span class="sort-arrow" aria-hidden="true"></span></button>
+          <button type="button" class="sort-head" data-sort="peakRating" aria-label="Trier par pic Elo">Pic elo <span class="sort-arrow" aria-hidden="true"></span></button>
+          <button type="button" class="sort-head" data-sort="progressToPeak" aria-label="Trier par progression">Progression <span class="sort-arrow" aria-hidden="true"></span></button>
+          <button type="button" class="sort-head" data-sort="games" aria-label="Trier par nombre de parties">Parties <span class="sort-arrow" aria-hidden="true"></span></button>
         </div>
         <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
       </section>
     </section>
 
-    <section id="admin-panel" class="card glass-card hidden">
-      <h2>Panneau admin</h2>
-      <div id="admin-status" class="status info">Connectez-vous pour écrire dans Supabase.</div>
+    <section id="admin-panel" class="card glass-card admin-panel hidden">
+      <button id="admin-toggle" class="admin-toggle" type="button" aria-expanded="true">
+        <span>
+          <strong>Panneau admin</strong>
+          <small>Gestion des joueurs et paramètres</small>
+        </span>
+        <span id="admin-toggle-icon" class="toggle-icon">▾</span>
+      </button>
 
-      <form id="add-player-form" class="panel-grid">
-        <label>Username Chess.com
-          <input id="player-username" type="text" required placeholder="magnuscarlsen" />
-        </label>
-        <label>Nom affiché
-          <input id="player-display-name" type="text" required placeholder="Magnus Carlsen" />
-        </label>
-        <label>Club
-          <input id="player-club" type="text" value="Ivoire Chess Club" />
-        </label>
-        <button class="btn" type="submit">Ajouter un joueur</button>
-      </form>
+      <div id="admin-content" class="admin-content">
+        <div id="admin-status" class="status info">Connectez-vous pour écrire dans Supabase.</div>
 
-      <form id="top-limit-form" class="panel-inline">
-        <label>Top limit partagé
-          <input id="top-limit-input" type="number" min="1" max="100" required />
-        </label>
-        <button class="btn" type="submit">Mettre à jour</button>
-      </form>
+        <form id="add-player-form" class="panel-grid">
+          <label>Username Chess.com
+            <input id="player-username" type="text" required placeholder="magnuscarlsen" />
+          </label>
+          <label>Nom affiché
+            <input id="player-display-name" type="text" required placeholder="Magnus Carlsen" />
+          </label>
+          <label>Club
+            <input id="player-club" type="text" value="Ivoire Chess Club" />
+          </label>
+          <button class="btn" type="submit">Ajouter un joueur</button>
+        </form>
 
-      <h3>Gestion des joueurs</h3>
-      <ul id="admin-player-list" class="player-list"></ul>
+        <form id="top-limit-form" class="panel-inline">
+          <label>Top limit partagé
+            <input id="top-limit-input" type="number" min="1" max="100" required />
+          </label>
+          <button class="btn btn-violet" type="submit">Mettre à jour</button>
+        </form>
+
+        <h3>Gestion des joueurs</h3>
+        <ul id="admin-player-list" class="player-list"></ul>
+      </div>
     </section>
   </main>
 
@@ -133,7 +140,7 @@
       <h3>Confirmation</h3>
       <p id="confirm-text"></p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" type="button" data-close="confirm-modal">Annuler</button>
+        <button class="btn btn-ghost" type="button" data-close="confirm-modal">Annuler</button>
         <button id="confirm-submit-btn" class="btn" type="submit">Confirmer</button>
       </div>
     </form>

@@ -13,11 +13,13 @@ const state = {
   ratingsByUser: new Map(),
   profilesByUser: new Map(),
   rankingDeltaByUser: new Map(),
+  baseOrderByUser: new Map(),
   session: null,
   search: '',
-  sort: 'rating_desc',
+  sort: { key: 'rating', direction: 'desc' },
   isOffline: false,
   pendingDeleteId: null,
+  isAdminCollapsed: false,
 };
 
 const els = {
@@ -30,6 +32,9 @@ const els = {
   lastSync: document.getElementById('last-sync'),
   adminPanel: document.getElementById('admin-panel'),
   adminPlayerList: document.getElementById('admin-player-list'),
+  adminContent: document.getElementById('admin-content'),
+  adminToggle: document.getElementById('admin-toggle'),
+  adminToggleIcon: document.getElementById('admin-toggle-icon'),
   refreshBtn: document.getElementById('refresh-btn'),
   adminLoginBtn: document.getElementById('admin-login-btn'),
   logoutBtn: document.getElementById('logout-btn'),
@@ -40,7 +45,7 @@ const els = {
   topLimitForm: document.getElementById('top-limit-form'),
   topLimitInput: document.getElementById('top-limit-input'),
   searchInput: document.getElementById('search-input'),
-  sortSelect: document.getElementById('sort-select'),
+  sortHeaders: Array.from(document.querySelectorAll('.sort-head')),
   toastRegion: document.getElementById('toast-region'),
   loginModal: document.getElementById('login-modal'),
   playerModal: document.getElementById('player-modal'),
@@ -85,43 +90,76 @@ function rankMedal(rank) {
   return '';
 }
 
+function normalizeResult(result = '') {
+  const lower = result.toLowerCase();
+  if (lower.includes('win') || lower.includes('gagn')) return 'Victoire';
+  if (lower.includes('draw') || lower.includes('nul') || lower.includes('stalemate')) return 'Nul';
+  return 'Défaite';
+}
+
 function ratingDiffBadge(diff) {
-  if (typeof diff !== 'number' || Number.isNaN(diff) || diff === 0) return '';
+  if (typeof diff !== 'number' || Number.isNaN(diff) || diff === 0) return '<span class="elo-diff neutral">±0</span>';
   const sign = diff > 0 ? '+' : '';
-  return `<span class="elo-diff ${diff > 0 ? 'up' : 'down'}">${sign}${diff}</span>`;
+  const kind = diff > 0 ? 'up' : 'down';
+  return `<span class="elo-diff ${kind}">${sign}${diff}</span>`;
 }
 
 function progressBadge(value) {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+  if (typeof value !== 'number' || Number.isNaN(value) || value === 0) return '<span class="elo-diff neutral">Stable</span>';
   const sign = value > 0 ? '+' : '';
-  const klass = value >= 0 ? 'up' : 'down';
+  const klass = value > 0 ? 'up' : 'down';
   return `<span class="elo-diff ${klass}">${sign}${value}</span>`;
 }
 
-function sortedRows() {
-  const rows = state.players
-    .map((p) => {
-      const ratingData = state.ratingsByUser.get(p.username_chesscom) || {
-        rating: 0,
-        games: 0,
-        peakRating: 0,
-        progressToPeak: 0,
-      };
-      const profile = state.profilesByUser.get(p.username_chesscom) || {};
-      return { ...p, ...ratingData, ...profile };
-    })
-    .filter((p) => {
-      const q = state.search.toLowerCase();
-      return !q || p.display_name.toLowerCase().includes(q) || p.username_chesscom.toLowerCase().includes(q);
-    });
+function getMergedRows() {
+  return state.players.map((p, index) => {
+    const ratingData = state.ratingsByUser.get(p.username_chesscom) || {
+      rating: 0,
+      games: 0,
+      peakRating: 0,
+      progressToPeak: 0,
+    };
+    const profile = state.profilesByUser.get(p.username_chesscom) || {};
+    return {
+      ...p,
+      ...ratingData,
+      ...profile,
+      baseRank: state.baseOrderByUser.get(p.username_chesscom) || index + 1,
+    };
+  });
+}
 
-  rows.sort((a, b) => {
-    if (state.sort === 'name_asc') return a.display_name.localeCompare(b.display_name);
-    if (state.sort === 'rating_asc') return a.rating - b.rating;
-    return b.rating - a.rating;
+function compareValues(a, b, key) {
+  if (key === 'player') return a.display_name.localeCompare(b.display_name, 'fr');
+  if (key === 'rank') return a.baseRank - b.baseRank;
+  if (['rating', 'peakRating', 'progressToPeak', 'games'].includes(key)) return Number(a[key] || 0) - Number(b[key] || 0);
+  return 0;
+}
+
+function sortedRows() {
+  const q = state.search.toLowerCase();
+  const filtered = getMergedRows().filter((p) => {
+    return !q || p.display_name.toLowerCase().includes(q) || p.username_chesscom.toLowerCase().includes(q);
   });
 
-  return rows.slice(0, state.topLimit);
+  const { key, direction } = state.sort;
+  filtered.sort((a, b) => {
+    const diff = compareValues(a, b, key);
+    if (diff === 0) return a.baseRank - b.baseRank;
+    return direction === 'asc' ? diff : -diff;
+  });
+
+  return filtered.slice(0, state.topLimit);
+}
+
+function updateSortUi() {
+  els.sortHeaders.forEach((head) => {
+    const isActive = head.dataset.sort === state.sort.key;
+    head.classList.toggle('active', isActive);
+    head.setAttribute('aria-sort', isActive ? (state.sort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+    const arrow = head.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = isActive ? (state.sort.direction === 'asc' ? '↑' : '↓') : '';
+  });
 }
 
 function renderPodium(rows) {
@@ -139,12 +177,12 @@ function renderPodium(rows) {
         : `<div class="avatar avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
       return `
         <article class="podium-card rank-${rank}" data-player="${player.id}">
-          <p class="medal">${rankMedal(rank)}</p>
+          <span class="podium-badge">${rankMedal(rank)} #${rank}</span>
           ${avatar}
           <p class="player-name">${player.display_name}</p>
           <p class="player-username">@${player.username_chesscom}</p>
           <p class="player-rating">${player.rating} Elo</p>
-          <p class="player-submetric">Pic ${player.peakRating || player.rating}</p>
+          <p class="player-submetric">Pic ${player.peakRating || player.rating} · ${player.games || 0} parties</p>
         </article>
       `;
     })
@@ -161,6 +199,7 @@ function renderRanking() {
     else state.rankingDeltaByUser.set(row.username_chesscom, 0);
   });
 
+  updateSortUi();
   renderPodium(rows);
 
   if (!rows.length) {
@@ -179,17 +218,11 @@ function renderRanking() {
       return `
         <article class="ranking-card ${shiftClass}" data-player="${row.id}" tabindex="0" role="button" aria-label="Voir détails ${row.display_name}">
           <p class="rank">${rankMedal(rank) || '#' + rank}</p>
-          ${avatar}
-          <div>
-            <p class="player-name">${row.display_name}</p>
-            <p class="player-username">@${row.username_chesscom}</p>
-          </div>
-          <div class="rating-wrap">
-            <p class="player-rating">${row.rating} Elo</p>
-            <p class="player-games">${row.games} parties</p>
-          </div>
+          <div class="player-line">${avatar}<div><p class="player-name">${row.display_name}</p><p class="player-username">@${row.username_chesscom}</p></div></div>
+          <p class="player-rating">${row.rating} Elo</p>
           <p class="peak-wrap">${row.peakRating || row.rating}</p>
           <p class="peak-progress">${progressBadge(row.progressToPeak)}</p>
+          <p class="matches-count">${row.games || 0}</p>
         </article>
       `;
     })
@@ -211,6 +244,10 @@ async function refreshRatings() {
     state.profilesByUser.set(player.username_chesscom, profile || {});
   });
   await Promise.all(tasks);
+
+  const baseline = getMergedRows().sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+  baseline.forEach((row, idx) => state.baseOrderByUser.set(row.username_chesscom, idx + 1));
+
   renderRanking();
 }
 
@@ -272,6 +309,13 @@ function updateAdminUi() {
   els.adminLoginBtn.classList.toggle('hidden', isConnected);
   setAdminStatus('info', isConnected ? `Connecté: ${state.session.user.email}` : 'Non connecté.');
   renderAdminPlayers();
+}
+
+function toggleAdminPanel() {
+  state.isAdminCollapsed = !state.isAdminCollapsed;
+  els.adminContent.classList.toggle('collapsed', state.isAdminCollapsed);
+  els.adminToggle.setAttribute('aria-expanded', String(!state.isAdminCollapsed));
+  els.adminToggleIcon.textContent = state.isAdminCollapsed ? '▸' : '▾';
 }
 
 async function ensureSession() {
@@ -363,60 +407,82 @@ async function showPlayerModal(id) {
   const games = await fetchMonthlyGames(player.username_chesscom);
   const openings = topOpeningsFromGames(games);
 
+  const openers = openings.length
+    ? openings.map((entry) => `<li><span>${entry.opening}</span><strong>${entry.count}</strong></li>`).join('')
+    : '<li><span>Pas assez de données</span><strong>-</strong></li>';
+
   const gamesRows = games.length
     ? games
-      .map((game) => `
-        <tr>
-          <td>${game.date.toLocaleDateString('fr-FR')}</td>
-          <td>${game.opponent}</td>
-          <td>${game.result}</td>
-          <td>${game.color}</td>
-          <td>${game.opening}</td>
-          <td>${ratingDiffBadge(game.ratingDiff)}</td>
-          <td>${game.url ? `<a href="${game.url}" target="_blank" rel="noreferrer">Voir</a>` : '-'}</td>
-        </tr>
-      `)
+      .map((game) => {
+        const outcome = normalizeResult(game.result);
+        const outcomeClass = outcome === 'Victoire' ? 'result-win' : outcome === 'Nul' ? 'result-draw' : 'result-loss';
+        const avatar = game.opponentAvatar
+          ? `<img class="avatar" src="${game.opponentAvatar}" alt="Avatar adversaire ${game.opponent}" loading="lazy" />`
+          : `<div class="avatar avatar-fallback">${initials(game.opponent, game.opponent)}</div>`;
+        return `
+          <article class="game-row ${outcomeClass}">
+            <div>
+              <p class="meta-title">${game.date.toLocaleDateString('fr-FR')}</p>
+              <p class="meta-sub">${game.opening}</p>
+            </div>
+            <div class="opponent-wrap">
+              ${avatar}
+              <div>
+                <p class="meta-title">${game.opponent}</p>
+                <p class="meta-sub">${game.color === 'white' ? 'Blanc' : 'Noir'}</p>
+              </div>
+            </div>
+            <p><span class="badge ${outcomeClass}">${outcome}</span></p>
+            <p>${ratingDiffBadge(game.ratingDiff)}</p>
+            <p>${game.url ? `<a href="${game.url}" target="_blank" rel="noreferrer">Voir la partie</a>` : '-'}</p>
+          </article>
+        `;
+      })
       .join('')
-    : '<tr><td colspan="7">Aucune partie trouvée pour ce mois.</td></tr>';
-
-  const openers = openings.length
-    ? openings.map((entry) => `<li>${entry.opening} <strong>(${entry.count})</strong></li>`).join('')
-    : '<li>Pas assez de données</li>';
+    : '<p class="empty-state">Aucune partie trouvée pour ce mois.</p>';
 
   const avatar = profile.avatar
-    ? `<img class="avatar avatar-lg" src="${profile.avatar}" alt="Avatar ${player.display_name}"/>`
-    : `<div class="avatar avatar-lg avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
+    ? `<img class="avatar avatar-xl" src="${profile.avatar}" alt="Avatar ${player.display_name}"/>`
+    : `<div class="avatar avatar-xl avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
 
   const adminActions = state.session
     ? `
       <div class="modal-actions">
-        <button id="edit-player-btn" class="btn" type="button" data-player="${player.id}">Modifier</button>
-        <button id="delete-player-btn" class="btn btn-secondary" type="button" data-player="${player.id}">Désactiver</button>
+        <button id="edit-player-btn" class="btn btn-violet" type="button" data-player="${player.id}">Modifier</button>
+        <button id="delete-player-btn" class="btn btn-ghost" type="button" data-player="${player.id}">Désactiver</button>
       </div>
     `
     : '';
 
   els.playerModalBody.innerHTML = `
-    <div class="player-detail-head">
-      ${avatar}
-      <div>
-        <p class="player-name">${player.display_name}</p>
-        <p class="player-username">@${player.username_chesscom}</p>
-        <p>${rank ? `Rang #${rank} • ` : ''}${ratingData.rating} Elo (${state.mode})</p>
-        <p>Pic Elo: <strong>${ratingData.peakRating || ratingData.rating}</strong> • Progression: ${progressBadge(ratingData.progressToPeak)}</p>
+    <section class="player-detail-card">
+      <div class="player-detail-head">
+        ${avatar}
+        <div>
+          <p class="player-name">${player.display_name}</p>
+          <p class="player-username">@${player.username_chesscom}</p>
+          <p class="meta-sub">${rank ? `Rang #${rank} • ` : ''}${ratingData.rating} Elo (${state.mode})</p>
+        </div>
       </div>
-    </div>
-    <h4>Ouvertures préférées</h4>
-    <ul>${openers}</ul>
-    <h4>10 dernières parties du mois</h4>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Adversaire</th><th>Résultat</th><th>Couleur</th><th>Ouverture</th><th>Δ Elo</th><th>Lien</th></tr>
-        </thead>
-        <tbody>${gamesRows}</tbody>
-      </table>
-    </div>
+      <div class="stats-grid">
+        <article><p>Elo courant</p><strong>${ratingData.rating}</strong></article>
+        <article><p>Pic Elo</p><strong>${ratingData.peakRating || ratingData.rating}</strong></article>
+        <article><p>Progression</p><strong>${progressBadge(ratingData.progressToPeak)}</strong></article>
+        <article><p>Parties</p><strong>${ratingData.games || 0}</strong></article>
+      </div>
+    </section>
+
+    <section class="player-detail-panels">
+      <article class="detail-panel">
+        <h4>Ouvertures favorites</h4>
+        <ul class="opening-list">${openers}</ul>
+      </article>
+
+      <article class="detail-panel">
+        <h4>10 dernières parties</h4>
+        <div class="games-list">${gamesRows}</div>
+      </article>
+    </section>
     ${adminActions}
   `;
 }
@@ -515,17 +581,29 @@ function bindEvents() {
   els.refreshBtn.addEventListener('click', loadSharedData);
   els.adminLoginBtn.addEventListener('click', () => els.loginModal.showModal());
   els.logoutBtn.addEventListener('click', logoutAdmin);
+  els.adminToggle.addEventListener('click', toggleAdminPanel);
   els.loginForm.addEventListener('submit', loginAdmin);
   els.addPlayerForm.addEventListener('submit', addPlayer);
   els.topLimitForm.addEventListener('submit', updateTopLimit);
+
   els.searchInput.addEventListener('input', (e) => {
     state.search = e.target.value.trim();
     renderRanking();
   });
-  els.sortSelect.addEventListener('change', (e) => {
-    state.sort = e.target.value;
-    renderRanking();
+
+  els.sortHeaders.forEach((header) => {
+    header.addEventListener('click', () => {
+      const key = header.dataset.sort;
+      if (state.sort.key === key) {
+        state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sort.key = key;
+        state.sort.direction = key === 'player' ? 'asc' : 'desc';
+      }
+      renderRanking();
+    });
   });
+
   els.rankingList.addEventListener('click', onRankingClick);
   els.topThree.addEventListener('click', onRankingClick);
   els.adminPlayerList.addEventListener('click', onAdminPlayerAction);
