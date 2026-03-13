@@ -9,6 +9,7 @@ Frontend statique (GitHub Pages) + base partagée Supabase pour un classement mu
 - `supabaseClient.js` : client Supabase (URL + anon key).
 - `app.js` : logique métier (lecture/écriture/realtime).
 - `supabase/schema.sql` : tables, RLS et policies.
+- `supabase/seed_players.sql` : import initial des joueurs historiques.
 
 ## Démarrage local
 
@@ -21,10 +22,11 @@ Puis ouvrir `http://localhost:8080`.
 ## Configuration rapide
 
 1. Exécuter `supabase/schema.sql` dans l'éditeur SQL de Supabase.
-2. Créer un utilisateur admin dans Supabase Auth (email/password).
-3. Ajouter cet utilisateur dans `app_admins` avec son UUID.
-4. Remplir `SUPABASE_URL` et `SUPABASE_ANON_KEY` dans `supabaseClient.js`.
-5. Activer Realtime pour `players` et `app_settings` dans Supabase (Database > Replication).
+2. Exécuter `supabase/seed_players.sql` pour importer les joueurs existants (requête compatible avec `players(username_chesscom, display_name, club, is_active)`).
+3. Créer un utilisateur admin dans Supabase Auth (email/password).
+4. Ajouter cet utilisateur dans `app_admins` avec son UUID.
+5. Remplir `SUPABASE_URL` et `SUPABASE_ANON_KEY` dans `supabaseClient.js`.
+6. Activer Realtime pour `players` et `app_settings` dans Supabase (Database > Replication).
 
 ## Déploiement GitHub Pages
 

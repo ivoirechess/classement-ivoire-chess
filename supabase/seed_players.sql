@@ -1,0 +1,41 @@
+-- Seed initial des joueurs (compatible avec le schema.sql partagé)
+-- Requête idempotente: relançable sans créer de doublons.
+insert into public.players (username_chesscom, display_name, club, is_active)
+values
+  ('elfirouj225', 'Elfirouj225', 'Ivoire Chess Club', true),
+  ('ivoirechess', 'IvoireChess', 'Ivoire Chess Club', true),
+  ('yoann565', 'yoann565', 'Ivoire Chess Club', true),
+  ('red_tetrix', 'Red_Tetrix', 'Ivoire Chess Club', true),
+  ('sernser', 'SernSer', 'Ivoire Chess Club', true),
+  ('yaniss_ard', 'Yaniss_ard', 'Ivoire Chess Club', true),
+  ('matmastern', 'MatmasterN', 'Ivoire Chess Club', true),
+  ('nantyoff_2000', 'Nantyoff_2000', 'Ivoire Chess Club', true),
+  ('mikasauchiva', 'mikasauchiva', 'Ivoire Chess Club', true),
+  ('baymanchess07', 'Baymanchess07', 'Ivoire Chess Club', true),
+  ('eddieam', 'eddieam', 'Ivoire Chess Club', true),
+  ('leadersnas', 'leadersnas', 'Ivoire Chess Club', true),
+  ('ange_desire', 'Ange_Desire', 'Ivoire Chess Club', true),
+  ('ndjably31', 'Ndjably31', 'Ivoire Chess Club', true),
+  ('therkie22', 'TheRkie22', 'Ivoire Chess Club', true),
+  ('matmastern1', 'MatmasterN1', 'Ivoire Chess Club', true),
+  ('kkstar34', 'kkstar34', 'Ivoire Chess Club', true),
+  ('mikki200', 'mikki200', 'Ivoire Chess Club', true),
+  ('mr-jude', 'Mr-Jude', 'Ivoire Chess Club', true),
+  ('loicleheros', 'loicleheros', 'Ivoire Chess Club', true),
+  ('novadanieldemon', 'novadanieldemon', 'Ivoire Chess Club', true),
+  ('khal-jo', 'Khal-jo', 'Ivoire Chess Club', true),
+  ('le_maitre226', 'le_maitre226', 'Ivoire Chess Club', true),
+  ('shado_0w', 'Shado_0w', 'Ivoire Chess Club', true),
+  ('skuj-s', 'SKUJ-S', 'Ivoire Chess Club', true),
+  ('dark_zara', 'dark_zara', 'Ivoire Chess Club', true),
+  ('dahmer225', 'Dahmer225', 'Ivoire Chess Club', true),
+  ('legolemm', 'LeGolemm', 'Ivoire Chess Club', true),
+  ('ismob13', 'ismob13', 'Ivoire Chess Club', true),
+  ('theothniel7storm', 'theothniel7storm', 'Ivoire Chess Club', true),
+  ('jean_daniel23', 'Jean_Daniel23', 'Ivoire Chess Club', true),
+  ('rantanplan88', 'rantanplan88', 'Ivoire Chess Club', true),
+  ('mikasauchiwa', 'mikasauchiwa', 'Ivoire Chess Club', true)
+on conflict (username_chesscom) do update
+set display_name = excluded.display_name,
+    club = excluded.club,
+    is_active = excluded.is_active;

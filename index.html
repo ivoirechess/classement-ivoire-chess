@@ -9,12 +9,16 @@
 <body>
   <main class="container">
     <header class="header">
-      <div>
-        <p class="eyebrow">Ivoire Chess Club</p>
-        <h1>Classement live partagé</h1>
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">♞</div>
+        <div>
+          <p class="eyebrow">Ivoire Chess Club</p>
+          <h1>Classement live</h1>
+        </div>
       </div>
       <div class="header-actions">
-        <button id="refresh-btn" class="btn">Rafraîchir</button>
+        <p class="live-badge">● Chess.com live</p>
+        <button id="refresh-btn" class="btn">Actualiser</button>
         <button id="admin-toggle-btn" class="btn btn-secondary">Admin</button>
       </div>
     </header>
@@ -22,7 +26,7 @@
     <section class="card">
       <div class="toolbar">
         <div class="tabs" role="tablist" aria-label="Mode de jeu">
-          <button class="tab active" data-mode="rapid">Rapid</button>
+          <button class="tab active" data-mode="rapid">Rapide</button>
           <button class="tab" data-mode="blitz">Blitz</button>
           <button class="tab" data-mode="bullet">Bullet</button>
         </div>
