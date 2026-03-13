@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import {
+  fetchMonthlyContext,
   fetchMonthlyGames,
   fetchPlayerProfile,
   fetchPlayerStats,
@@ -12,6 +13,8 @@ const state = {
   players: [],
   ratingsByUser: new Map(),
   profilesByUser: new Map(),
+  // Stocke { referenceRating, isInactive, currentGames } par username
+  monthlyContextByUser: new Map(),
   rankingDeltaByUser: new Map(),
   baseOrderByUser: new Map(),
   session: null,
@@ -90,7 +93,6 @@ function rankMedal(rank) {
   return '';
 }
 
-// ── FIX: détecte le résultat depuis la chaîne française retournée par chessApi ──
 function classifyResult(result = '') {
   const r = result.toLowerCase();
   if (r.startsWith('victoire')) return 'win';
@@ -105,17 +107,38 @@ function ratingDiffBadge(diff) {
   return `<span class="elo-diff ${kind}">${sign}${diff}</span>`;
 }
 
-function progressBadge(value) {
-  if (typeof value !== 'number' || Number.isNaN(value) || value === 0) return '<span class="elo-diff neutral">Stable</span>';
+/**
+ * Badge de progression mensuelle.
+ * - null ou isInactive → badge "Inactif" grisé
+ * - 0 → "Stable"
+ * - positif/négatif → +N / -N coloré
+ */
+function progressBadge(value, isInactive = false) {
+  if (isInactive || value === null || value === undefined) {
+    return '<span class="elo-diff neutral">Inactif</span>';
+  }
+  if (typeof value !== 'number' || Number.isNaN(value) || value === 0) {
+    return '<span class="elo-diff neutral">Stable</span>';
+  }
   const sign = value > 0 ? '+' : '';
   const klass = value > 0 ? 'up' : 'down';
   return `<span class="elo-diff ${klass}">${sign}${value}</span>`;
 }
 
-// Tronque les noms d'ouvertures longs
 function shortOpening(name = '', maxLen = 28) {
   if (!name || name === 'Ouverture non disponible') return '—';
   return name.length > maxLen ? name.slice(0, maxLen - 1) + '…' : name;
+}
+
+/**
+ * Calcule la progression mensuelle pour un joueur :
+ * Elo actuel − Elo de référence (1ère partie du mois ou M-1).
+ * Retourne null si inactif.
+ */
+function computeMonthlyProgress(username, currentRating) {
+  const ctx = state.monthlyContextByUser.get(username);
+  if (!ctx || ctx.isInactive || ctx.referenceRating === null) return null;
+  return currentRating - ctx.referenceRating;
 }
 
 function getMergedRows() {
@@ -123,14 +146,21 @@ function getMergedRows() {
     const ratingData = state.ratingsByUser.get(p.username_chesscom) || {
       rating: 0,
       games: 0,
-      peakRating: 0,
-      progressToPeak: 0,
     };
     const profile = state.profilesByUser.get(p.username_chesscom) || {};
+    const ctx = state.monthlyContextByUser.get(p.username_chesscom) || {
+      referenceRating: null,
+      isInactive: true,
+    };
+    const monthlyProgress = computeMonthlyProgress(p.username_chesscom, ratingData.rating);
+
     return {
       ...p,
       ...ratingData,
       ...profile,
+      referenceRating: ctx.referenceRating,
+      isInactive: ctx.isInactive,
+      monthlyProgress,
       baseRank: state.baseOrderByUser.get(p.username_chesscom) || index + 1,
     };
   });
@@ -139,7 +169,13 @@ function getMergedRows() {
 function compareValues(a, b, key) {
   if (key === 'player') return a.display_name.localeCompare(b.display_name, 'fr');
   if (key === 'rank') return a.baseRank - b.baseRank;
-  if (['rating', 'peakRating', 'progressToPeak', 'games'].includes(key)) return Number(a[key] || 0) - Number(b[key] || 0);
+  if (key === 'progressToPeak') {
+    // Les inactifs vont en dernier lors du tri par progression
+    if (a.isInactive && !b.isInactive) return 1;
+    if (!a.isInactive && b.isInactive) return -1;
+    return Number(a.monthlyProgress || 0) - Number(b.monthlyProgress || 0);
+  }
+  if (['rating', 'games'].includes(key)) return Number(a[key] || 0) - Number(b[key] || 0);
   return 0;
 }
 
@@ -182,6 +218,7 @@ function renderPodium(rows) {
       const avatar = player.avatar
         ? `<img class="avatar" src="${player.avatar}" alt="Avatar ${player.display_name}" loading="lazy" />`
         : `<div class="avatar avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
+      const progHtml = progressBadge(player.monthlyProgress, player.isInactive);
       return `
         <article class="podium-card rank-${rank}" data-player="${player.id}">
           <span class="podium-badge">${rankMedal(rank)} #${rank}</span>
@@ -189,7 +226,7 @@ function renderPodium(rows) {
           <p class="player-name">${player.display_name}</p>
           <p class="player-username">@${player.username_chesscom}</p>
           <p class="player-rating">${player.rating} Elo</p>
-          <p class="player-submetric">Pic ${player.peakRating || player.rating} · ${player.games || 0} parties</p>
+          <p class="player-submetric">${progHtml} · ${player.games || 0} parties</p>
         </article>
       `;
     })
@@ -227,8 +264,8 @@ function renderRanking() {
           <p class="rank">${rankMedal(rank) || '#' + rank}</p>
           <div class="player-line">${avatar}<div><p class="player-name">${row.display_name}</p><p class="player-username">@${row.username_chesscom}</p></div></div>
           <p class="player-rating">${row.rating} Elo</p>
-          <p class="peak-wrap">${row.peakRating || row.rating}</p>
-          <p class="peak-progress">${progressBadge(row.progressToPeak)}</p>
+          <p class="peak-wrap">${row.referenceRating ?? '—'}</p>
+          <p class="peak-progress">${progressBadge(row.monthlyProgress, row.isInactive)}</p>
           <p class="matches-count">${row.games || 0}</p>
         </article>
       `;
@@ -243,12 +280,14 @@ function setOffline(isOffline) {
 
 async function refreshRatings() {
   const tasks = state.players.map(async (player) => {
-    const [ratingData, profile] = await Promise.all([
+    const [ratingData, profile, monthlyCtx] = await Promise.all([
       fetchPlayerStats(player.username_chesscom, state.mode),
       fetchPlayerProfile(player.username_chesscom),
+      fetchMonthlyContext(player.username_chesscom, state.mode),
     ]);
     state.ratingsByUser.set(player.username_chesscom, ratingData);
     state.profilesByUser.set(player.username_chesscom, profile || {});
+    state.monthlyContextByUser.set(player.username_chesscom, monthlyCtx);
   });
   await Promise.all(tasks);
 
@@ -399,19 +438,19 @@ async function showPlayerModal(id) {
   const player = playerById(id);
   if (!player) return;
 
-  const ratingData = state.ratingsByUser.get(player.username_chesscom) || {
-    rating: 0, games: 0, peakRating: 0, progressToPeak: 0,
-  };
+  const ratingData = state.ratingsByUser.get(player.username_chesscom) || { rating: 0, games: 0 };
   const profile = state.profilesByUser.get(player.username_chesscom) || {};
+  const ctx = state.monthlyContextByUser.get(player.username_chesscom) || { referenceRating: null, isInactive: true, currentGames: [] };
+  const monthlyProgress = computeMonthlyProgress(player.username_chesscom, ratingData.rating);
   const rank = sortedRows().findIndex((item) => item.id === player.id) + 1;
 
   els.playerModalBody.innerHTML = '<p class="status info">Chargement du profil…</p>';
   els.playerModal.showModal();
 
-  const games = await fetchMonthlyGames(player.username_chesscom);
+  // Réutilise les parties déjà chargées si disponibles
+  const games = await fetchMonthlyGames(player.username_chesscom, ctx.currentGames?.length ? ctx.currentGames : null);
   const openings = topOpeningsFromGames(games);
 
-  // ── OUVERTURES — affichage compact ──
   const openerRows = openings.length
     ? openings.map((entry) => `
         <li class="opening-item">
@@ -421,7 +460,6 @@ async function showPlayerModal(id) {
       .join('')
     : '<li class="opening-item"><span class="opening-name">—</span></li>';
 
-  // ── PARTIES — rendu compact, avatar adversaire ──
   const gameCards = games.length
     ? games.map((game) => {
         const kind = classifyResult(game.result);
@@ -455,6 +493,11 @@ async function showPlayerModal(id) {
     ? `<img class="avatar avatar-xl" src="${profile.avatar}" alt="${player.display_name}"/>`
     : `<div class="avatar avatar-xl avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
 
+  // Ligne de référence mensuelle dans les stats
+  const refLabel = ctx.isInactive
+    ? 'Inactif'
+    : (ctx.referenceRating ? `Réf. ${ctx.referenceRating}` : '—');
+
   const adminActions = state.session
     ? `<div class="modal-actions" style="margin-top:20px;">
         <button id="edit-player-btn" class="btn btn-violet" type="button" data-player="${player.id}">Modifier</button>
@@ -474,8 +517,8 @@ async function showPlayerModal(id) {
 
     <div class="stats-grid">
       <article><p>Elo</p><strong>${ratingData.rating}</strong></article>
-      <article><p>Pic</p><strong>${ratingData.peakRating || ratingData.rating}</strong></article>
-      <article><p>Progr.</p><strong>${progressBadge(ratingData.progressToPeak)}</strong></article>
+      <article><p>Réf. mois</p><strong>${ctx.referenceRating ?? '—'}</strong></article>
+      <article><p>Progr. mois</p><strong>${progressBadge(monthlyProgress, ctx.isInactive)}</strong></article>
       <article><p>Parties</p><strong>${ratingData.games || 0}</strong></article>
     </div>
 
