@@ -90,11 +90,12 @@ function rankMedal(rank) {
   return '';
 }
 
-function normalizeResult(result = '') {
-  const lower = result.toLowerCase();
-  if (lower.includes('win') || lower.includes('gagn')) return 'Victoire';
-  if (lower.includes('draw') || lower.includes('nul') || lower.includes('stalemate')) return 'Nul';
-  return 'Défaite';
+// ── FIX: détecte le résultat depuis la chaîne française retournée par chessApi ──
+function classifyResult(result = '') {
+  const r = result.toLowerCase();
+  if (r.startsWith('victoire')) return 'win';
+  if (r.startsWith('nulle') || r.startsWith('nul')) return 'draw';
+  return 'loss';
 }
 
 function ratingDiffBadge(diff) {
@@ -109,6 +110,12 @@ function progressBadge(value) {
   const sign = value > 0 ? '+' : '';
   const klass = value > 0 ? 'up' : 'down';
   return `<span class="elo-diff ${klass}">${sign}${value}</span>`;
+}
+
+// Tronque les noms d'ouvertures longs
+function shortOpening(name = '', maxLen = 28) {
+  if (!name || name === 'Ouverture non disponible') return '—';
+  return name.length > maxLen ? name.slice(0, maxLen - 1) + '…' : name;
 }
 
 function getMergedRows() {
@@ -275,8 +282,8 @@ async function loadSharedData() {
   renderAdminPlayers();
   setOffline(false);
   const now = new Date();
-  els.lastSync.textContent = `Dernière mise à jour: ${now.toLocaleString('fr-FR')}`;
-  setStatus('success', `${rowsMessage()} synchronisés.`);
+  els.lastSync.textContent = `Sync ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  setStatus('success', `${sortedRows().length} joueurs synchronisés.`);
 }
 
 function rowsMessage() {
@@ -393,96 +400,96 @@ async function showPlayerModal(id) {
   if (!player) return;
 
   const ratingData = state.ratingsByUser.get(player.username_chesscom) || {
-    rating: 0,
-    games: 0,
-    peakRating: 0,
-    progressToPeak: 0,
+    rating: 0, games: 0, peakRating: 0, progressToPeak: 0,
   };
   const profile = state.profilesByUser.get(player.username_chesscom) || {};
   const rank = sortedRows().findIndex((item) => item.id === player.id) + 1;
 
-  els.playerModalBody.innerHTML = '<p class="status info">Chargement du profil détaillé...</p>';
+  els.playerModalBody.innerHTML = '<p class="status info">Chargement du profil…</p>';
   els.playerModal.showModal();
 
   const games = await fetchMonthlyGames(player.username_chesscom);
   const openings = topOpeningsFromGames(games);
 
-  const openers = openings.length
-    ? openings.map((entry) => `<li><span>${entry.opening}</span><strong>${entry.count}</strong></li>`).join('')
-    : '<li><span>Pas assez de données</span><strong>-</strong></li>';
+  // ── OUVERTURES — affichage compact ──
+  const openerRows = openings.length
+    ? openings.map((entry) => `
+        <li class="opening-item">
+          <span class="opening-name" title="${entry.opening}">${shortOpening(entry.opening)}</span>
+          <span class="opening-count">${entry.count}</span>
+        </li>`)
+      .join('')
+    : '<li class="opening-item"><span class="opening-name">—</span></li>';
 
-  const gamesRows = games.length
-    ? games
-      .map((game) => {
-        const outcome = normalizeResult(game.result);
-        const outcomeClass = outcome === 'Victoire' ? 'result-win' : outcome === 'Nul' ? 'result-draw' : 'result-loss';
-        const avatar = game.opponentAvatar
-          ? `<img class="avatar" src="${game.opponentAvatar}" alt="Avatar adversaire ${game.opponent}" loading="lazy" />`
-          : `<div class="avatar avatar-fallback">${initials(game.opponent, game.opponent)}</div>`;
+  // ── PARTIES — rendu compact, avatar adversaire ──
+  const gameCards = games.length
+    ? games.map((game) => {
+        const kind = classifyResult(game.result);
+        const labelMap = { win: 'Victoire', draw: 'Nulle', loss: 'Défaite' };
+        const label = labelMap[kind];
+        const oppAvatar = game.opponentAvatar
+          ? `<img class="avatar opp-avatar" src="${game.opponentAvatar}" alt="${game.opponent}" loading="lazy" />`
+          : `<div class="avatar opp-avatar avatar-fallback">${initials(game.opponent, game.opponent)}</div>`;
+        const colorDot = game.color === 'white'
+          ? '<span class="color-dot white" title="Blancs"></span>'
+          : '<span class="color-dot black" title="Noirs"></span>';
         return `
-          <article class="game-row ${outcomeClass}">
-            <div>
-              <p class="meta-title">${game.date.toLocaleDateString('fr-FR')}</p>
-              <p class="meta-sub">${game.opening}</p>
-            </div>
-            <div class="opponent-wrap">
-              ${avatar}
-              <div>
-                <p class="meta-title">${game.opponent}</p>
-                <p class="meta-sub">${game.color === 'white' ? 'Blanc' : 'Noir'}</p>
+          <article class="game-pill result-${kind}">
+            <span class="result-stripe"></span>
+            <div class="game-pill-left">
+              ${oppAvatar}
+              <div class="game-pill-info">
+                <p class="game-opponent">${game.opponent}</p>
+                <p class="game-meta">${game.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} ${colorDot}</p>
               </div>
             </div>
-            <p><span class="badge ${outcomeClass}">${outcome}</span></p>
-            <p>${ratingDiffBadge(game.ratingDiff)}</p>
-            <p>${game.url ? `<a href="${game.url}" target="_blank" rel="noreferrer">Voir la partie</a>` : '-'}</p>
-          </article>
-        `;
-      })
-      .join('')
-    : '<p class="empty-state">Aucune partie trouvée pour ce mois.</p>';
+            <div class="game-pill-right">
+              <span class="result-tag result-${kind}">${label}</span>
+              ${ratingDiffBadge(game.ratingDiff)}
+            </div>
+          </article>`;
+      }).join('')
+    : '<p class="empty-state">Aucune partie ce mois.</p>';
 
   const avatar = profile.avatar
-    ? `<img class="avatar avatar-xl" src="${profile.avatar}" alt="Avatar ${player.display_name}"/>`
+    ? `<img class="avatar avatar-xl" src="${profile.avatar}" alt="${player.display_name}"/>`
     : `<div class="avatar avatar-xl avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
 
   const adminActions = state.session
-    ? `
-      <div class="modal-actions">
+    ? `<div class="modal-actions" style="margin-top:20px;">
         <button id="edit-player-btn" class="btn btn-violet" type="button" data-player="${player.id}">Modifier</button>
         <button id="delete-player-btn" class="btn btn-ghost" type="button" data-player="${player.id}">Désactiver</button>
-      </div>
-    `
+      </div>`
     : '';
 
   els.playerModalBody.innerHTML = `
-    <section class="player-detail-card">
-      <div class="player-detail-head">
-        ${avatar}
-        <div>
-          <p class="player-name">${player.display_name}</p>
-          <p class="player-username">@${player.username_chesscom}</p>
-          <p class="meta-sub">${rank ? `Rang #${rank} • ` : ''}${ratingData.rating} Elo (${state.mode})</p>
-        </div>
+    <div class="profile-hero">
+      ${avatar}
+      <div class="profile-hero-info">
+        <p class="player-name">${player.display_name}</p>
+        <p class="player-username">@${player.username_chesscom}</p>
+        <p class="meta-sub">${rank ? `#${rank} · ` : ''}${ratingData.rating} Elo ${state.mode}</p>
       </div>
-      <div class="stats-grid">
-        <article><p>Elo courant</p><strong>${ratingData.rating}</strong></article>
-        <article><p>Pic Elo</p><strong>${ratingData.peakRating || ratingData.rating}</strong></article>
-        <article><p>Progression</p><strong>${progressBadge(ratingData.progressToPeak)}</strong></article>
-        <article><p>Parties</p><strong>${ratingData.games || 0}</strong></article>
+    </div>
+
+    <div class="stats-grid">
+      <article><p>Elo</p><strong>${ratingData.rating}</strong></article>
+      <article><p>Pic</p><strong>${ratingData.peakRating || ratingData.rating}</strong></article>
+      <article><p>Progr.</p><strong>${progressBadge(ratingData.progressToPeak)}</strong></article>
+      <article><p>Parties</p><strong>${ratingData.games || 0}</strong></article>
+    </div>
+
+    <div class="profile-panels">
+      <div class="panel-col panel-openings">
+        <p class="panel-title">Ouvertures</p>
+        <ul class="opening-list">${openerRows}</ul>
       </div>
-    </section>
+      <div class="panel-col panel-games">
+        <p class="panel-title">10 dernières parties</p>
+        <div class="games-list">${gameCards}</div>
+      </div>
+    </div>
 
-    <section class="player-detail-panels">
-      <article class="detail-panel">
-        <h4>Ouvertures favorites</h4>
-        <ul class="opening-list">${openers}</ul>
-      </article>
-
-      <article class="detail-panel">
-        <h4>10 dernières parties</h4>
-        <div class="games-list">${gamesRows}</div>
-      </article>
-    </section>
     ${adminActions}
   `;
 }
@@ -497,21 +504,14 @@ function openEditPrompt(id) {
   const username = window.prompt('Username Chess.com', player.username_chesscom);
   if (username === null) return;
 
-  supabase
-    .from('players')
-    .update({
-      display_name: displayName.trim(),
-      club: club.trim(),
-      username_chesscom: username.trim().toLowerCase(),
-    })
-    .eq('id', id)
-    .then(({ error }) => {
-      if (error) {
-        toast(`Modification refusée: ${error.message}`, 'error');
-        return;
-      }
-      toast('Joueur modifié.', 'success');
-    });
+  supabase.from('players').update({
+    display_name: displayName.trim(),
+    club: club.trim(),
+    username_chesscom: username.trim().toLowerCase(),
+  }).eq('id', id).then(({ error }) => {
+    if (error) { toast(`Modification refusée: ${error.message}`, 'error'); return; }
+    toast('Joueur modifié.', 'success');
+  });
 }
 
 function askDeactivate(id) {
@@ -527,10 +527,7 @@ async function confirmDeactivate(event) {
   els.confirmSubmitBtn.disabled = true;
   const { error } = await supabase.from('players').update({ is_active: false }).eq('id', state.pendingDeleteId);
   els.confirmSubmitBtn.disabled = false;
-  if (error) {
-    toast(`Désactivation refusée: ${error.message}`, 'error');
-    return;
-  }
+  if (error) { toast(`Désactivation refusée: ${error.message}`, 'error'); return; }
   toast('Joueur désactivé.', 'success');
   state.pendingDeleteId = null;
   els.confirmModal.close();
