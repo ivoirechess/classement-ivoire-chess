@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>♟ Classement Club Échecs – Live Chess.com</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c9a84c;
+      --gold-light: #e8c96a;
+      --silver: #9ba8b4;
+      --bronze: #b87c4c;
+      --bg: #0d0f12;
+      --bg2: #13161b;
+      --bg3: #1a1e25;
+      --border: rgba(201,168,76,0.18);
+      --text: #e8e4d8;
+      --text-dim: #7a7870;
+      --blitz: #f97316;
+      --rapid: #22d3ee;
+      --bullet: #a78bfa;
+      --online: #4ade80;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Background chess pattern ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-conic-gradient(rgba(201,168,76,0.025) 0% 25%, transparent 0% 50%);
+      background-size: 80px 80px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Radial glow top center ─── */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(ellipse, rgba(201,168,76,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      text-align: center;
+      padding: 52px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .club-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(201,168,76,0.08);
+      border: 1px solid var(--border);
+      border-radius: 40px;
+      padding: 6px 18px 6px 10px;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 24px;
+    }
+    .club-badge span { font-size: 18px; }
+
+    h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(52px, 9vw, 96px);
+      letter-spacing: 0.06em;
+      line-height: 0.9;
+      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, #a07830 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    h1 em {
+      font-family: 'Crimson Pro', serif;
+      font-style: italic;
+      font-size: 0.55em;
+      display: block;
+      -webkit-text-fill-color: var(--silver);
+      letter-spacing: 0.12em;
+      margin-top: 4px;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 24px;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--online);
+      box-shadow: 0 0 8px var(--online);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    #last-update { color: var(--gold); }
+
+    /* ─── Tabs ─── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 28px;
+      width: fit-content;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 20px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      padding: 10px 28px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .tab-btn[data-mode="blitz"] .dot { background: var(--blitz); }
+    .tab-btn[data-mode="rapid"] .dot  { background: var(--rapid); }
+    .tab-btn[data-mode="bullet"] .dot { background: var(--bullet); }
+
+    .tab-btn.active {
+      color: var(--text);
+    }
+    .tab-btn[data-mode="blitz"].active  { background: rgba(249,115,22,0.15); color: var(--blitz); }
+    .tab-btn[data-mode="rapid"].active  { background: rgba(34,211,238,0.12); color: var(--rapid); }
+    .tab-btn[data-mode="bullet"].active { background: rgba(167,139,250,0.15); color: var(--bullet); }
+
+    /* ─── Table ─── */
+    .table-wrap {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: grid;
+      grid-template-columns: 56px 1fr 120px 120px;
+      padding: 12px 24px;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 56px 1fr 120px 120px;
+      padding: 0 24px;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      height: 60px;
+      transition: background 0.15s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .row:last-child { border-bottom: none; }
+    .row:hover { background: rgba(201,168,76,0.05); cursor: pointer; }
+
+    /* podium rows */
+    .row.rank-1 { background: linear-gradient(90deg, rgba(201,168,76,0.12) 0%, transparent 60%); }
+    .row.rank-2 { background: linear-gradient(90deg, rgba(155,168,180,0.08) 0%, transparent 60%); }
+    .row.rank-3 { background: linear-gradient(90deg, rgba(184,124,76,0.08) 0%, transparent 60%); }
+
+    .rank-num {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+    }
+    .rank-1 .rank-num { color: var(--gold); text-shadow: 0 0 20px rgba(201,168,76,0.5); }
+    .rank-2 .rank-num { color: var(--silver); }
+    .rank-3 .rank-num { color: var(--bronze); }
+
+    .medal {
+      font-size: 18px;
+      display: none;
+    }
+    .rank-1 .medal { display: inline; }
+    .rank-2 .medal { display: inline; }
+    .rank-3 .medal { display: inline; }
+    .rank-1 .rank-plain,
+    .rank-2 .rank-plain,
+    .rank-3 .rank-plain { display: none; }
+
+    .player-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--bg3);
+      border: 2px solid rgba(201,168,76,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 15px;
+      color: var(--gold);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+    .player-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .elo {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 26px;
+      letter-spacing: 0.04em;
+      text-align: right;
+    }
+    .elo-active { color: var(--text); }
+    .elo-na { color: var(--text-dim); font-size: 16px; }
+
+    .elo-blitz  { color: var(--blitz); }
+    .elo-rapid  { color: var(--rapid); }
+    .elo-bullet { color: var(--bullet); }
+
+    .elo-sub {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      text-align: right;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ─── Loading / Error ─── */
+    .loading-overlay {
+      padding: 80px 20px;
+      text-align: center;
+      display: none;
+    }
+    .loading-overlay.visible { display: block; }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-msg {
+      color: var(--text-dim);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .error-badge {
+      display: inline-block;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #f87171;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 11px;
+      margin-top: 10px;
+    }
+
+    /* ─── Refresh btn ─── */
+    .refresh-btn {
+      background: rgba(201,168,76,0.1);
+      border: 1px solid var(--border);
+      color: var(--gold);
+      border-radius: 8px;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 16px;
+      letter-spacing: 0.1em;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .refresh-btn:hover {
+      background: rgba(201,168,76,0.2);
+      border-color: var(--gold);
+    }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .refresh-icon { transition: transform 0.4s; }
+    .refresh-btn.spinning .refresh-icon { transform: rotate(360deg); }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* ─── Footer ─── */
+    footer {
+      text-align: center;
+      padding: 40px 0 0;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+    }
+    footer a { color: var(--gold); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ─── Row fade-in ─── */
+    @keyframes rowIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .row { animation: rowIn 0.3s ease both; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 600px) {
+      .table-header,
+      .row { grid-template-columns: 44px 1fr 80px; }
+      .col-games { display: none; }
+      .tab-btn { font-size: 16px; padding: 8px 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <header>
+    <div class="club-badge"><span>♟</span> Club d'Échecs</div>
+    <h1>Classement<em>Elo Live</em></h1>
+    <div class="status-bar">
+      <div class="status-dot"></div>
+      <span>Chess.com · Live</span>
+      <span>Dernière MAJ : <span id="last-update">—</span></span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="tabs">
+      <button class="tab-btn active" data-mode="blitz">
+        <span class="dot"></span> Blitz
+      </button>
+      <button class="tab-btn" data-mode="rapid">
+        <span class="dot"></span> Rapide
+      </button>
+      <button class="tab-btn" data-mode="bullet">
+        <span class="dot"></span> Bullet
+      </button>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">
+      <span class="refresh-icon">↻</span> Actualiser
+    </button>
+  </div>
+
+  <div class="table-wrap" id="table-wrap">
+    <div class="table-header">
+      <div>#</div>
+      <div>Joueur</div>
+      <div style="text-align:right">ELO</div>
+      <div style="text-align:right" class="col-games">Parties</div>
+    </div>
+    <div class="loading-overlay visible" id="loading">
+      <div class="spinner"></div>
+      <div class="empty-msg">Chargement des données Chess.com…</div>
+    </div>
+    <div id="rows-container"></div>
+  </div>
+
+  <footer>
+    Données issues de l'API publique <a href="https://www.chess.com" target="_blank">Chess.com</a> · Actualisation automatique toutes les 5 min<br>
+    <br>Top 20 affiché sur <span id="total-players">—</span> joueurs enregistrés
+  </footer>
+
+</div>
+
+<script>
+const PLAYERS = [
+  { username: 'elfirouj225',      displayName: 'Elfirouj225' },
+  { username: 'ivoirechess',      displayName: 'IvoireChess' },
+  { username: 'yoann565',         displayName: 'yoann565' },
+  { username: 'red_tetrix',       displayName: 'Red_Tetrix' },
+  { username: 'sernser',          displayName: 'SernSer' },
+  { username: 'yaniss_ard',       displayName: 'Yaniss_ard' },
+  { username: 'matmastern',       displayName: 'MatmasterN' },
+  { username: 'nantyoff_2000',    displayName: 'Nantyoff_2000' },
+  { username: 'mikasauchiva',     displayName: 'mikasauchiva' },
+  { username: 'baymanchess07',    displayName: 'Baymanchess07' },
+  { username: 'eddieam',          displayName: 'eddieam' },
+  { username: 'leadersnas',       displayName: 'leadersnas' },
+  { username: 'ange_desire',      displayName: 'Ange_Desire' },
+  { username: 'ndjably31',        displayName: 'Ndjably31' },
+  { username: 'therkie22',        displayName: 'TheRkie22' },
+  { username: 'matmastern1',      displayName: 'MatmasterN1' },
+  { username: 'kkstar34',         displayName: 'kkstar34' },
+  { username: 'mikki200',         displayName: 'mikki200' },
+  { username: 'mr-jude',          displayName: 'Mr-Jude' },
+  { username: 'loicleheros',      displayName: 'loicleheros' },
+  { username: 'novadanieldemon',  displayName: 'novadanieldemon' },
+  { username: 'khal-jo',          displayName: 'Khal-jo' },
+  { username: 'le_maitre226',     displayName: 'le_maitre226' },
+  { username: 'shado_0w',         displayName: 'Shado_0w' },
+  { username: 'skuj-s',           displayName: 'SKUJ-S' },
+  { username: 'dark_zara',        displayName: 'dark_zara' },
+  { username: 'dahmer225',        displayName: 'Dahmer225' },
+  { username: 'legolemm',         displayName: 'LeGolemm' },
+  { username: 'ismob13',          displayName: 'ismob13' },
+];
+
+let currentMode = 'blitz';
+let cachedData = {};
+let isLoading = false;
+
+const modeKey = { blitz: 'chess_blitz', rapid: 'chess_rapid', bullet: 'chess_bullet' };
+
+async function fetchPlayer(player) {
+  const url = `https://api.chess.com/pub/player/${player.username}/stats`;
+  try {
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return { ...player, ratings: {} };
+    const data = await res.json();
+    const ratings = {};
+    for (const [mode, key] of Object.entries(modeKey)) {
+      if (data[key]) {
+        ratings[mode] = {
+          elo: data[key].last?.rating ?? null,
+          games: (data[key].record?.win ?? 0) + (data[key].record?.loss ?? 0) + (data[key].record?.draw ?? 0),
+          avatar: null
+        };
+      } else {
+        ratings[mode] = { elo: null, games: 0 };
+      }
+    }
+    return { ...player, ratings };
+  } catch {
+    return { ...player, ratings: {} };
+  }
+}
+
+async function fetchAllPlayers() {
+  isLoading = true;
+  setLoading(true);
+  const results = await Promise.all(PLAYERS.map(fetchPlayer));
+  cachedData = {};
+  for (const p of results) cachedData[p.username] = p;
+  isLoading = false;
+  setLoading(false);
+  renderTable();
+  updateTimestamp();
+}
+
+function setLoading(state) {
+  document.getElementById('loading').className = 'loading-overlay' + (state ? ' visible' : '');
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = state;
+  btn.classList.toggle('spinning', state);
+}
+
+function renderTable() {
+  const container = document.getElementById('rows-container');
+  container.innerHTML = '';
+
+  const all = Object.values(cachedData);
+  document.getElementById('total-players').textContent = all.length;
+
+  const sorted = all
+    .filter(p => p.ratings[currentMode]?.elo != null)
+    .sort((a, b) => b.ratings[currentMode].elo - a.ratings[currentMode].elo)
+    .slice(0, 20);
+
+  const medals = ['🥇', '🥈', '🥉'];
+
+  sorted.forEach((p, i) => {
+    const rank = i + 1;
+    const { elo, games } = p.ratings[currentMode];
+    const initials = p.displayName.slice(0, 2).toUpperCase();
+
+    const row = document.createElement('a');
+    row.href = `https://www.chess.com/member/${p.username}`;
+    row.target = '_blank';
+    row.rel = 'noopener';
+    row.className = `row${rank <= 3 ? ' rank-' + rank : ''}`;
+    row.style.animationDelay = `${i * 30}ms`;
+
+    row.innerHTML = `
+      <div class="rank-num">
+        <span class="medal">${medals[rank-1] || ''}</span>
+        <span class="rank-plain">${rank}</span>
+      </div>
+      <div class="player-info">
+        <div class="avatar" id="av-${p.username}">${initials}</div>
+        <div class="player-name">${p.displayName}</div>
+      </div>
+      <div>
+        <div class="elo elo-${currentMode}">${elo}</div>
+        <div class="elo-sub">ELO</div>
+      </div>
+      <div class="col-games">
+        <div class="elo elo-na">${games > 0 ? games : '—'}</div>
+        <div class="elo-sub">parties</div>
+      </div>
+    `;
+    container.appendChild(row);
+
+    // Load avatar async
+    loadAvatar(p.username);
+  });
+
+  if (sorted.length === 0) {
+    container.innerHTML = `<div class="loading-overlay visible"><div class="empty-msg">Aucune donnée disponible. Vérifiez la connexion.</div><div class="error-badge">API Chess.com inaccessible ou joueurs introuvables</div></div>`;
+  }
+}
+
+async function loadAvatar(username) {
+  try {
+    const res = await fetch(`https://api.chess.com/pub/player/${username}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.avatar) {
+      const el = document.getElementById('av-' + username);
+      if (el) el.innerHTML = `<img src="${data.avatar}" alt="${username}" onerror="this.parentElement.innerHTML='${username.slice(0,2).toUpperCase()}'">`;
+    }
+  } catch {}
+}
+
+function updateTimestamp() {
+  const now = new Date();
+  document.getElementById('last-update').textContent =
+    now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  renderTable();
+}
+
+function refreshData() {
+  if (isLoading) return;
+  fetchAllPlayers();
+}
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+});
+
+// Auto refresh every 5 min
+setInterval(() => {
+  if (!isLoading) fetchAllPlayers();
+}, 5 * 60 * 1000);
+
+// Init
+fetchAllPlayers();
+</script>
+</body>
+</html>
