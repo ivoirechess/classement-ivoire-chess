@@ -7,32 +7,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --green:#1E8C45;--green-light:#27a855;--green-dark:#145c2d;--green-dim:rgba(30,140,69,.12);
-  --orange:#E86020;--orange-light:#f07840;--orange-dark:#a03c08;--orange-dim:rgba(232,96,32,.12);
-  --bg:#0a1a0f;--bg2:#0e2016;--bg3:#12281b;--bg4:#162e20;
-  --card:#0f2318;--card2:#132a1c;
-  --border:rgba(30,140,69,.2);--border2:rgba(30,140,69,.1);
-  --text:#e8f4ec;--text2:#9dbfaa;--text3:#5a7d65;
-  --gold:#f5c842;--silver:#c8d4dc;--bronze:#cd8c5a;
-  --rapid:#27a855;--blitz:#E86020;--bullet:#9b6fd4;
+  --green:#197148;--green-light:#2d9967;--green-dark:#0f4c31;--green-dim:rgba(25,113,72,.10);
+  --orange:#c9723a;--orange-light:#d88a58;--orange-dark:#8f4d26;--orange-dim:rgba(201,114,58,.11);
+  --bg:#f4f6f5;--bg2:#edf2ef;--bg3:#e4ebe7;--bg4:#dce5df;
+  --card:#ffffff;--card2:#f8fbf9;
+  --border:rgba(20,58,39,.13);--border2:rgba(20,58,39,.08);
+  --text:#1d2a22;--text2:#4f6559;--text3:#7a8f84;
+  --gold:#caa441;--silver:#9fa8b2;--bronze:#ab7a58;
+  --rapid:#2d9967;--blitz:#c9723a;--bullet:#6b63b5;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{background:radial-gradient(circle at 15% 20%, rgba(232,96,32,.13), transparent 35%), radial-gradient(circle at 80% 10%, rgba(255,255,255,.07), transparent 32%), var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;}
+body{background:linear-gradient(180deg,#f6f8f7 0%,#eef3f0 100%);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;}
 
-/* Chess pattern bg */
 body::before{
   content:'';position:fixed;inset:0;
-  background-image:repeating-conic-gradient(rgba(30,140,69,.03) 0% 25%,transparent 0% 50%);
-  background-size:60px 60px;pointer-events:none;z-index:0;
-}
-/* Green glow top */
-body::after{
-  content:'';position:fixed;top:-300px;left:50%;transform:translateX(-50%);
-  width:1000px;height:700px;
-  background:radial-gradient(ellipse,rgba(30,140,69,.2) 0%,rgba(255,255,255,.06) 40%,transparent 70%);
+  background:radial-gradient(circle at 10% 0%, rgba(25,113,72,.09), transparent 38%),
+             radial-gradient(circle at 90% 5%, rgba(201,114,58,.08), transparent 34%);
   pointer-events:none;z-index:0;
 }
+body::after{display:none;}
 
 .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 20px 80px;}
 
@@ -89,7 +83,7 @@ header{
 .refresh-btn.spinning .spin{transform:rotate(360deg);}
 
 /* ── TABLE ── */
-.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(15,40,27,.06);}
 .table-wrap.cards .t-head{display:none;}
 .table-wrap.cards #rows{display:grid;gap:10px;padding:10px;}
 .table-wrap.cards .t-row{display:block;height:auto;padding:12px;border:1px solid var(--border2);border-radius:10px;background:rgba(255,255,255,.02);}
@@ -277,7 +271,7 @@ header{
 .notif.show{transform:translateY(0);opacity:1;}
 
 
-.club-ribbon{margin:-8px 0 22px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(0,0,0,.2));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.club-ribbon{margin:-8px 0 22px;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(232,238,234,.95));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 10px 24px rgba(15,40,27,.05);}
 .club-ribbon .stripes{display:flex;gap:8px;align-items:center;}
 .club-ribbon .stripe{width:48px;height:8px;border-radius:999px;box-shadow:0 0 8px rgba(255,255,255,.15)}
 .club-ribbon .stripe.green{background:var(--green);}
@@ -427,7 +421,7 @@ header{
           <input type="text" id="add-player-input" placeholder="ex: Magnus_Carlsen" />
         </div>
         <button class="adm-btn green" id="add-player-btn">+ Ajouter par pseudo</button>
-        <div class="admin-hint">Ajoute un membre via pseudo ou lien Chess.com.</div>
+        <div class="admin-hint">Ajoute un membre via pseudo ou lien Chess.com. Synchronisation multi-appareils active si SHARED_STATE_URL est configuré.</div>
         <button class="adm-btn" id="export-players-btn" style="background:var(--bg4);border:1px solid var(--border);color:var(--text2)">Exporter joueurs JSON</button>
       </div>
 
@@ -438,7 +432,7 @@ header{
             <option value="3">Top 3</option><option value="5">Top 5</option><option value="10">Top 10</option><option value="15">Top 15</option>
             <option value="20">Top 20</option><option value="25">Top 25</option><option value="30">Top 30</option><option value="full">Full</option>
           </select>
-          <div class="top-limit-note">Seuil global pour Rapide/Blitz/Bullet.</div>
+          <div class="top-limit-note">Seuil global pour Rapide/Blitz/Bullet (répliqué sur tous les appareils via endpoint partagé).</div>
         </div>
       </div>
 
@@ -464,6 +458,11 @@ header{
 //  STORAGE & STATE
 // ═══════════════════════════════
 const SK = 'icc_ranking_v3';
+const SHARED_STATE_URL = 'https://example.com/icc-shared-state.json'; // Remplacer par votre endpoint JSON (GET/PUT)
+const SHARED_SYNC_INTERVAL_MS = 30 * 1000;
+const SHARED_SYNC_TIMEOUT_MS = 8000;
+const sharedStateHeaders = {'Content-Type':'application/json'};
+
 function loadState(){
   try{ const d=localStorage.getItem(SK); if(d) return JSON.parse(d); }catch(e){}
   return {
@@ -507,6 +506,64 @@ if(!S.topLimit) S.topLimit = '20';
 if(typeof S.playersCustomized !== 'boolean') S.playersCustomized = false;
 function saveState(){ localStorage.setItem(SK, JSON.stringify(S)); }
 
+function buildSharedPayload(){
+  return {
+    topLimit: S.topLimit || '20',
+    players: Array.isArray(S.players) ? S.players : [],
+    updatedAt: Date.now()
+  };
+}
+
+function applySharedPayload(payload){
+  if(!payload || !Array.isArray(payload.players)) return false;
+  const remoteUpdatedAt = Number(payload.updatedAt || 0);
+  const localUpdatedAt = Number(S.sharedUpdatedAt || 0);
+  if(remoteUpdatedAt <= localUpdatedAt) return false;
+
+  S.players = payload.players;
+  S.topLimit = payload.topLimit || '20';
+  S.playersCustomized = true;
+  S.sharedUpdatedAt = remoteUpdatedAt;
+  saveState();
+  syncTopLimitSelect();
+  renderPlayersList();
+  return true;
+}
+
+async function fetchSharedState(){
+  if(!SHARED_STATE_URL || SHARED_STATE_URL.includes('example.com')) return null;
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), SHARED_SYNC_TIMEOUT_MS);
+  try{
+    const r = await fetch(`${SHARED_STATE_URL}?t=${Date.now()}`, {cache:'no-store', signal:ctrl.signal});
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){
+    return null;
+  }finally{
+    clearTimeout(t);
+  }
+}
+
+async function pushSharedState(){
+  if(!SHARED_STATE_URL || SHARED_STATE_URL.includes('example.com')) return;
+  const payload = buildSharedPayload();
+  S.sharedUpdatedAt = payload.updatedAt;
+  saveState();
+  try{
+    await fetch(SHARED_STATE_URL, {method:'PUT', headers:sharedStateHeaders, body:JSON.stringify(payload)});
+  }catch(e){}
+}
+
+async function pullSharedStateAndRefresh(){
+  const remote = await fetchSharedState();
+  const changed = applySharedPayload(remote);
+  if(changed){
+    await refreshData(true);
+    showNotif('🔄 Mise à jour admin synchronisée');
+  }
+}
+
 async function fetchProjectJson(path){
   try{
     const r = await fetch(path, {cache:'no-store'});
@@ -520,6 +577,7 @@ async function syncProjectData(){
   if(Array.isArray(projectPlayers) && projectPlayers.length && !S.playersCustomized){
     S.players = projectPlayers;
   }
+  if(!S.sharedUpdatedAt) S.sharedUpdatedAt = 0;
   saveState();
 }
 
@@ -733,7 +791,9 @@ function syncTopLimitSelect(){
 
 function updateTopLimit(value){
   S.topLimit = value;
+  S.playersCustomized = true;
   saveState();
+  pushSharedState();
   renderTable();
   showNotif(`Seuil classement: ${value==='full' ? 'Full' : `Top ${value}`}`);
 }
@@ -941,6 +1001,7 @@ function removePlayer(username){
   S.players = S.players.filter(p => p.username !== username);
   S.playersCustomized = true;
   saveState();
+  pushSharedState();
   delete cache[username];
   selectedAdminPlayer = null;
   renderPlayersList();
@@ -967,6 +1028,7 @@ async function addPlayer(){
   S.players.push({username, displayName});
   S.playersCustomized = true;
   saveState();
+  pushSharedState();
   cache[username] = data;
   loadAvatar(username);
   renderPlayersList();
@@ -1060,8 +1122,10 @@ function bindUIEvents(){
 (async function init(){
   bindUIEvents();
   await syncProjectData();
+  await pullSharedStateAndRefresh();
   updateAdminButton();
   refreshData(true);
+  setInterval(()=>{ pullSharedStateAndRefresh(); }, SHARED_SYNC_INTERVAL_MS);
 })();
 </script>
 </body>
