@@ -169,11 +169,17 @@ function getMergedRows() {
 function compareValues(a, b, key) {
   if (key === 'player') return a.display_name.localeCompare(b.display_name, 'fr');
   if (key === 'rank') return a.baseRank - b.baseRank;
-  if (key === 'progressToPeak') {
+  if (key === 'monthlyProgress') {
     // Les inactifs vont en dernier lors du tri par progression
     if (a.isInactive && !b.isInactive) return 1;
     if (!a.isInactive && b.isInactive) return -1;
     return Number(a.monthlyProgress || 0) - Number(b.monthlyProgress || 0);
+  }
+  if (key === 'referenceRating') {
+    // Les références non disponibles vont en dernier
+    if (a.referenceRating === null && b.referenceRating !== null) return 1;
+    if (a.referenceRating !== null && b.referenceRating === null) return -1;
+    return Number(a.referenceRating || 0) - Number(b.referenceRating || 0);
   }
   if (['rating', 'games'].includes(key)) return Number(a[key] || 0) - Number(b[key] || 0);
   return 0;
