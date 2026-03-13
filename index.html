@@ -18,7 +18,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;}
+body{background:radial-gradient(circle at 15% 20%, rgba(232,96,32,.13), transparent 35%), radial-gradient(circle at 80% 10%, rgba(255,255,255,.07), transparent 32%), var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;}
 
 /* Chess pattern bg */
 body::before{
@@ -30,7 +30,7 @@ body::before{
 body::after{
   content:'';position:fixed;top:-300px;left:50%;transform:translateX(-50%);
   width:1000px;height:700px;
-  background:radial-gradient(ellipse,rgba(30,140,69,.15) 0%,transparent 65%);
+  background:radial-gradient(ellipse,rgba(30,140,69,.2) 0%,rgba(255,255,255,.06) 40%,transparent 70%);
   pointer-events:none;z-index:0;
 }
 
@@ -251,17 +251,37 @@ header{
 .players-grid{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto;margin-bottom:14px;}
 .player-item{display:flex;align-items:center;gap:10px;padding:8px 12px;
   background:var(--bg3);border-radius:6px;font-size:13px;font-weight:500;}
+.player-item{cursor:pointer;transition:background .15s,border-color .15s; border:1px solid transparent;}
+.player-item:hover{background:var(--bg4);}
+.player-item.selected{border-color:rgba(232,96,32,.45);background:rgba(232,96,32,.1);}
 .pi-idx{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);width:20px;}
 .pi-name{flex:1;}
 .pi-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:2px 6px;
   border-radius:4px;transition:all .12s;}
 .pi-del:hover{background:rgba(232,96,32,.15);color:var(--orange-light);}
+.pi-actions{display:flex;justify-content:flex-end;margin:-2px 0 6px;}
+.pi-del-opt{background:rgba(232,96,32,.18);border:1px solid rgba(232,96,32,.45);color:var(--orange-light);
+  padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+.pi-del-opt:hover{background:rgba(232,96,32,.26);}
 
 /* notif */
 .notif{position:fixed;bottom:22px;right:22px;background:var(--green-dark);border:1px solid var(--green);
   color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;
   letter-spacing:.06em;transform:translateY(60px);opacity:0;transition:all .28s ease;z-index:200;}
 .notif.show{transform:translateY(0);opacity:1;}
+
+
+.club-ribbon{margin:-8px 0 22px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(0,0,0,.2));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.club-ribbon .stripes{display:flex;gap:8px;align-items:center;}
+.club-ribbon .stripe{width:48px;height:8px;border-radius:999px;box-shadow:0 0 8px rgba(255,255,255,.15)}
+.club-ribbon .stripe.green{background:var(--green);} 
+.club-ribbon .stripe.ivory{background:#fffdf7;} 
+.club-ribbon .stripe.orange{background:var(--orange);} 
+.club-ribbon .txt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);font-weight:600;}
+.btn-admin.admin-on{background:rgba(30,140,69,.2);border-color:var(--green);color:#d5ffe4;}
+.btn-admin.admin-on:hover{background:rgba(30,140,69,.3);} 
+.admin-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.admin-hint{font-size:11px;color:var(--text3);margin-top:8px;line-height:1.35;}
 
 /* row animation */
 @keyframes rowIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}
@@ -289,9 +309,16 @@ header{
       <div class="s-dot"></div>
       Chess.com &nbsp;·&nbsp; <span id="upd-time">—</span>
     </div>
-    <button class="btn-admin" onclick="openAdminGate()">🔒 Admin</button>
+    <button class="btn-admin" id="admin-btn" onclick="openAdminGate()">🔒 Admin</button>
   </div>
 </header>
+
+<div class="club-ribbon">
+  <div class="stripes">
+    <span class="stripe green"></span><span class="stripe ivory"></span><span class="stripe orange"></span>
+  </div>
+  <div class="txt">Classement officiel · Ivoire Chess Club</div>
+</div>
 
 <div class="controls">
   <div class="tabs" id="tabs">
@@ -358,13 +385,17 @@ header{
         <label>Ajouter un joueur (pseudo Chess.com)</label>
         <input type="text" id="add-player-input" placeholder="ex: Magnus_Carlsen" onkeydown="if(event.key==='Enter')addPlayer()"/>
       </div>
-      <button class="adm-btn green" onclick="addPlayer()">+ Ajouter</button>
+      <button class="adm-btn green" onclick="addPlayer()">+ Ajouter par pseudo</button>
+      <div class="admin-hint">Ajoute un membre en collant son pseudo Chess.com (ou son lien profil).</div>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
         <div class="field">
           <label>Changer le mot de passe</label>
           <input type="password" id="new-pwd" placeholder="Nouveau mot de passe"/>
         </div>
-        <button class="adm-btn" onclick="changePwd()" style="background:var(--bg4);border:1px solid var(--border);color:var(--text2)">Changer le mot de passe</button>
+        <div class="admin-actions">
+          <button class="adm-btn" onclick="changePwd()" style="background:var(--bg4);border:1px solid var(--border);color:var(--text2)">Changer le mot de passe</button>
+          <button class="adm-btn" onclick="logoutAdmin()" style="background:rgba(232,96,32,.15);border:1px solid rgba(232,96,32,.35);color:var(--orange-light)">Quitter mode admin</button>
+        </div>
       </div>
     </div>
   </div>
@@ -441,7 +472,7 @@ async function fetchPlayerStats(p){
         ratings[mode] = {elo:null, peak:null, games:0};
       }
     }
-    return {...p, ratings};
+    return {...p, username:d.username?.toLowerCase()||p.username, displayName:d.username||p.displayName||p.username, ratings};
   }catch(e){ return {...p, ratings:{}}; }
 }
 
@@ -451,7 +482,7 @@ async function fetchAvatar(username){
     if(!r.ok) return null;
     const d = await r.json();
     return d.avatar || null;
-  }catch(){ return null; }
+  }catch(e){ return null; }
 }
 
 async function fetchRecentGames(username, mode){
@@ -464,7 +495,7 @@ async function fetchRecentGames(username, mode){
     const d = await r.json();
     const modeFilter = mode === 'rapid' ? 'rapid' : mode === 'blitz' ? 'blitz' : 'bullet';
     return (d.games||[]).filter(g=>g.time_class===modeFilter).slice(-10).reverse();
-  }catch(){ return []; }
+  }catch(e){ return []; }
 }
 
 async function refreshData(){
@@ -528,12 +559,16 @@ function renderTable(){
     const row = document.createElement('div');
     row.className = `t-row${rank<=3?' rank-'+rank:''}`;
     row.style.animationDelay = `${i*25}ms`;
+    const avatarCell = p.avatar
+      ? `<img src="${p.avatar}" alt="${p.username}" onerror="this.parentElement.innerHTML='${initials}'">`
+      : initials;
+
     row.innerHTML = `
       <div class="rank-c">
         ${rank<=3 ? `<span class="medal">${MEDALS[rank-1]}</span>` : `<span class="rank-n">${rank}</span>`}
       </div>
       <div class="player-c">
-        <div class="avatar" id="av-${p.username}">${initials}</div>
+        <div class="avatar" id="av-${p.username}">${avatarCell}</div>
         <div>
           <div class="p-name">${p.displayName||p.username}</div>
           <div class="p-link">chess.com/${p.username}</div>
@@ -554,6 +589,8 @@ function renderTable(){
 
     row.addEventListener('click', () => openPlayerModal(p.username));
     cont.appendChild(row);
+
+    if(!p.avatar) loadAvatar(p.username);
   });
 
   if(sorted.length === 0){
@@ -694,6 +731,21 @@ async function openPlayerModal(username){
 //  ADMIN
 // ═══════════════════════════════
 let isAdmin = false;
+let selectedAdminPlayer = null;
+
+function updateAdminButton(){
+  const b = document.getElementById('admin-btn');
+  if(!b) return;
+  b.classList.toggle('admin-on', isAdmin);
+  b.textContent = isAdmin ? '🟢 Mode admin' : '🔒 Admin';
+}
+
+function normalizeUsername(input){
+  if(!input) return '';
+  const fromUrl = input.match(/chess\.com\/(?:fr\/)?member\/([a-zA-Z0-9_-]+)/i);
+  const value = fromUrl ? fromUrl[1] : input;
+  return value.trim().toLowerCase().replace(/^@/,'').replace(/\s+/g,'_');
+}
 
 function openAdminGate(){
   if(isAdmin){ openAdminPanel(); return; }
@@ -705,6 +757,7 @@ function openAdminGate(){
 function doLogin(){
   if(document.getElementById('pwd-in').value === S.password){
     isAdmin = true;
+    updateAdminButton();
     closeModal('modal-login');
     openAdminPanel();
   } else {
@@ -712,25 +765,44 @@ function doLogin(){
   }
 }
 
+function logoutAdmin(){
+  isAdmin = false;
+  updateAdminButton();
+  closeModal('modal-admin');
+  showNotif('Mode admin désactivé');
+}
+
 function openAdminPanel(){
+  selectedAdminPlayer = null;
   renderPlayersList();
   openModal('modal-admin');
+}
+
+function selectAdminPlayer(username){
+  selectedAdminPlayer = selectedAdminPlayer === username ? null : username;
+  renderPlayersList();
 }
 
 function renderPlayersList(){
   const cont = document.getElementById('players-list');
   cont.innerHTML = S.players.map((p,i) => `
-    <div class="player-item">
+    <div class="player-item ${selectedAdminPlayer===p.username?'selected':''}" onclick="selectAdminPlayer('${p.username}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectAdminPlayer('${p.username}')">
       <span class="pi-idx">${i+1}</span>
       <span class="pi-name">${p.displayName} <span style="color:var(--text3);font-size:11px">(${p.username})</span></span>
-      <button class="pi-del" onclick="removePlayer('${p.username}')" title="Retirer">✕</button>
-    </div>`).join('');
+      <span class="pi-del" title="Sélectionner">⋯</span>
+    </div>
+    ${selectedAdminPlayer===p.username ? `<div class="pi-actions"><button class="pi-del-opt" onclick="event.stopPropagation();removePlayer('${p.username}')">Supprimer ce joueur</button></div>` : ''}`
+  ).join('');
 }
 
 function removePlayer(username){
+  const p = S.players.find(pl => pl.username === username);
+  if(!p) return;
+  if(!confirm(`Supprimer ${p.displayName} (${p.username}) ?`)) return;
   S.players = S.players.filter(p => p.username !== username);
   saveState();
   delete cache[username];
+  selectedAdminPlayer = null;
   renderPlayersList();
   renderTable();
   showNotif(`✓ ${username} retiré`);
@@ -740,7 +812,8 @@ async function addPlayer(){
   const input = document.getElementById('add-player-input');
   const raw = input.value.trim();
   if(!raw) return;
-  const username = raw.toLowerCase().replace(/\s+/g,'_');
+  const username = normalizeUsername(raw);
+  if(!username){ showNotif('⚠ Pseudo invalide'); return; }
   if(S.players.find(p=>p.username===username)){
     showNotif('⚠ Joueur déjà dans la liste'); return;
   }
@@ -751,14 +824,15 @@ async function addPlayer(){
     showNotif('❌ Joueur introuvable sur Chess.com');
     return;
   }
-  S.players.push({username, displayName: raw});
+  const displayName = data.displayName || data.username || raw;
+  S.players.push({username, displayName});
   saveState();
   cache[username] = data;
   loadAvatar(username);
   renderPlayersList();
   renderTable();
   input.value = '';
-  showNotif(`✓ ${raw} ajouté !`);
+  showNotif(`✓ ${displayName} ajouté !`);
 }
 
 function changePwd(){
@@ -788,6 +862,7 @@ function showNotif(msg){
 setInterval(()=>{ if(!isLoading) refreshData(); }, 5*60*1000);
 
 // Init
+updateAdminButton();
 refreshData();
 </script>
 </body>
