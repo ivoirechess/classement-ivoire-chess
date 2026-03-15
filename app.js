@@ -218,9 +218,13 @@ function renderPodium(rows) {
     return;
   }
 
-  els.topThree.innerHTML = top3
-    .map((player, index) => {
-      const rank = index + 1;
+  const podiumOrder = [1, 0, 2]
+    .map((index) => top3[index])
+    .filter(Boolean);
+
+  els.topThree.innerHTML = podiumOrder
+    .map((player) => {
+      const rank = top3.findIndex((p) => p.id === player.id) + 1;
       const avatar = player.avatar
         ? `<img class="avatar" src="${player.avatar}" alt="Avatar ${player.display_name}" loading="lazy" />`
         : `<div class="avatar avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
@@ -228,11 +232,14 @@ function renderPodium(rows) {
       return `
         <article class="podium-card rank-${rank}" data-player="${player.id}">
           <span class="podium-badge">${rankMedal(rank)} #${rank}</span>
-          ${avatar}
-          <p class="player-name">${player.display_name}</p>
-          <p class="player-username">@${player.username_chesscom}</p>
-          <p class="player-rating">${player.rating} Elo</p>
-          <p class="player-submetric">${progHtml} · ${player.games || 0} parties</p>
+          <div class="podium-content">
+            ${avatar}
+            <p class="player-name">${player.display_name}</p>
+            <p class="player-username">@${player.username_chesscom}</p>
+            <p class="player-rating">${player.rating} Elo</p>
+            <p class="player-submetric">${progHtml} · ${player.games || 0} parties</p>
+          </div>
+          <div class="podium-step" aria-hidden="true"></div>
         </article>
       `;
     })

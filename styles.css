@@ -88,6 +88,7 @@ body::after {
   margin-bottom: 16px;
   padding: 24px;
 }
+.card + .card { margin-top: 18px; }
 
 /* ── HEADER ── */
 .header {
@@ -96,7 +97,7 @@ body::after {
   align-items: center;
   gap: 24px;
   padding: 20px 28px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -204,7 +205,7 @@ h1 {
 /* ── TOOLBAR ── */
 .toolbar {
   display: flex; justify-content: space-between;
-  align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+  align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px;
 }
 .toolbar-start, .toolbar-end { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .sort-hint { font-size: 11px; color: var(--text-3); }
@@ -263,41 +264,74 @@ h4 { font-size: 13px; font-weight: 600; color: var(--text-2); margin: 0 0 10px; 
 
 /* ── PODIUM ── */
 .top-three {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 14px; margin-bottom: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+  margin-bottom: 32px;
 }
 .podium-card {
-  border-radius: var(--radius); border: 1px solid var(--border);
-  padding: 20px 16px; text-align: center; cursor: pointer;
-  position: relative; overflow: hidden;
-  transition: all 200ms ease; background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  background: var(--surface-2);
+  display: grid;
+  grid-template-rows: auto auto;
 }
 .podium-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-deep); }
+.podium-content { padding: 18px 16px 14px; }
+
+.podium-step {
+  width: 100%;
+  border-top: 1px solid rgba(255,255,255,0.65);
+  background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08));
+}
+.podium-card.rank-1 .podium-step { height: 78px; }
+.podium-card.rank-2 .podium-step { height: 56px; }
+.podium-card.rank-3 .podium-step { height: 42px; }
 
 .podium-card.rank-1 {
-  background: linear-gradient(160deg, rgba(212,175,55,0.1), rgba(212,175,55,0.03) 80%, transparent);
-  border-color: rgba(184,144,10,0.35);
-  box-shadow: var(--shadow-card), 0 0 30px rgba(184,144,10,0.08);
+  background: linear-gradient(160deg, rgba(212,175,55,0.14), rgba(212,175,55,0.04) 80%, transparent);
+  border-color: rgba(184,144,10,0.4);
+  box-shadow: var(--shadow-card), 0 0 30px rgba(184,144,10,0.1);
 }
 .podium-card.rank-1::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--gold-light), transparent); opacity: 0.8;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold-light), transparent);
+  opacity: 0.8;
 }
 .podium-card.rank-2 {
-  background: linear-gradient(160deg, rgba(150,160,175,0.09), rgba(150,160,175,0.03));
-  border-color: rgba(140,150,170,0.3);
+  background: linear-gradient(160deg, rgba(150,160,175,0.12), rgba(150,160,175,0.03));
+  border-color: rgba(140,150,170,0.32);
 }
 .podium-card.rank-3 {
-  background: linear-gradient(160deg, rgba(180,110,50,0.08), rgba(180,110,50,0.03));
-  border-color: rgba(180,110,50,0.28);
+  background: linear-gradient(160deg, rgba(180,110,50,0.1), rgba(180,110,50,0.03));
+  border-color: rgba(180,110,50,0.32);
 }
 
 .podium-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace;
-  padding: 5px 10px; border-radius: 999px;
-  background: rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.08);
-  color: var(--text-2); letter-spacing: 0.05em; margin-bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.08);
+  color: var(--text-2);
+  letter-spacing: 0.05em;
+  margin-bottom: 14px;
 }
 
 .podium-card .avatar { width: 64px; height: 64px; margin: 0 auto 12px; }
@@ -619,13 +653,15 @@ a:hover { color: var(--gold); text-decoration: underline; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .player-detail-panels { grid-template-columns: 1fr; }
   .game-row { grid-template-columns: 1fr 1fr; }
-  .top-three { grid-template-columns: repeat(3, 1fr); }
+  .top-three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 }
 @media (max-width: 780px) {
   .header { flex-direction: column; align-items: flex-start; gap: 16px; }
   .header-actions { justify-content: flex-start; }
   .search-input { width: 100%; }
-  .top-three { grid-template-columns: 1fr; gap: 10px; }
+  .top-three { grid-template-columns: 1fr; gap: 10px; align-items: stretch; }
+  .podium-card { grid-template-rows: 1fr; }
+  .podium-step { display: none; }
 }
 @media (max-width: 660px) {
   .ranking-head { display: none; }
