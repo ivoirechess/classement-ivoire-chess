@@ -25,6 +25,8 @@ const state = {
   isOffline: false,
   pendingDeleteId: null,
   isAdminCollapsed: false,
+  playerModalMode: 'rapid',
+  playerModalRequestId: 0,
 };
 
 const els = {
@@ -487,25 +489,36 @@ function playerById(id) {
   return state.players.find((p) => p.id === Number(id));
 }
 
-async function showPlayerModal(id) {
+async function showPlayerModal(id, mode = state.mode) {
   const player = playerById(id);
   if (!player) return;
 
-  const ratingData = state.ratingsByUser.get(player.username_chesscom) || { rating: 0, games: 0 };
+  const requestId = ++state.playerModalRequestId;
+  state.playerModalMode = mode;
+
+  const isRankingMode = mode === state.mode;
+  const ratingData = isRankingMode
+    ? (state.ratingsByUser.get(player.username_chesscom) || { rating: 0, games: 0 })
+    : await fetchPlayerStats(player.username_chesscom, mode);
   const profile = state.profilesByUser.get(player.username_chesscom) || {};
-  const ctx = state.monthlyContextByUser.get(player.username_chesscom) || { referenceRating: null, isInactive: true, currentGames: [] };
+  const ctx = isRankingMode
+    ? (state.monthlyContextByUser.get(player.username_chesscom) || { referenceRating: null, isInactive: true, currentGames: [] })
+    : await fetchMonthlyContext(player.username_chesscom, mode);
   const monthlyProgress = computeMonthlyProgress(player.username_chesscom, ratingData.rating);
   const rank = sortedRows().findIndex((item) => item.id === player.id) + 1;
 
   els.playerModalBody.innerHTML = '<p class="status info">Chargement du profil…</p>';
-  els.playerModal.showModal();
+  if (!els.playerModal.open) els.playerModal.showModal();
 
   // Réutilise les parties déjà chargées si disponibles
   const games = await fetchMonthlyGames(
     player.username_chesscom,
     ctx.currentGames?.length ? ctx.currentGames : null,
-    state.mode,
+    mode,
   );
+
+  if (requestId !== state.playerModalRequestId) return;
+
   const openings = topOpeningsFromGames(games);
 
   const openerRows = openings.length
@@ -564,14 +577,23 @@ async function showPlayerModal(id) {
       <div class="profile-hero-info">
         <p class="player-name">${player.display_name}</p>
         <p class="player-username">@${player.username_chesscom}</p>
-        <p class="meta-sub">${rank ? `#${rank} · ` : ''}${ratingData.rating} Elo · ${MODE_LABEL[state.mode] || state.mode}</p>
+        <p class="meta-sub">${rank ? `#${rank} · ` : ''}${ratingData.rating} Elo · ${MODE_LABEL[mode] || mode}</p>
       </div>
+    </div>
+
+    <div class="profile-mode-switch tabs" role="tablist" aria-label="Cadence dans le profil joueur">
+      <button class="tab ${mode === 'rapid' ? 'active' : ''}" type="button" data-player-mode="rapid" data-player-id="${player.id}">Rapide</button>
+      <button class="tab ${mode === 'blitz' ? 'active' : ''}" type="button" data-player-mode="blitz" data-player-id="${player.id}">Blitz</button>
+      <button class="tab ${mode === 'bullet' ? 'active' : ''}" type="button" data-player-mode="bullet" data-player-id="${player.id}">Bullet</button>
     </div>
 
     <div class="stats-grid">
       <article><p>Elo</p><strong>${ratingData.rating}</strong></article>
       <article><p>Réf. mois</p><strong>${ctx.referenceRating ?? '—'}</strong></article>
-      <article><p>Progr. mois</p><strong>${progressBadge(monthlyProgress, ctx.isInactive)}</strong></article>
+      <article><p>Progr. mois</p><strong>${progressBadge(
+        isRankingMode ? monthlyProgress : (ctx.isInactive || ctx.referenceRating === null ? null : ratingData.rating - ctx.referenceRating),
+        ctx.isInactive,
+      )}</strong></article>
       <article><p>Parties</p><strong>${ratingData.games || 0}</strong></article>
     </div>
 
@@ -703,6 +725,14 @@ function bindEvents() {
   els.playerModalBody.addEventListener('click', (event) => {
     const edit = event.target.closest('#edit-player-btn');
     const remove = event.target.closest('#delete-player-btn');
+    const modeButton = event.target.closest('[data-player-mode]');
+    if (modeButton) {
+      const targetMode = modeButton.dataset.playerMode;
+      const playerId = Number(modeButton.dataset.playerId);
+      if (targetMode && playerId && targetMode !== state.playerModalMode) {
+        showPlayerModal(playerId, targetMode);
+      }
+    }
     if (edit) openEditPrompt(Number(edit.dataset.player));
     if (remove) askDeactivate(Number(remove.dataset.player));
   });
