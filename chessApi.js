@@ -4,6 +4,15 @@ function safeUsername(username) {
   return encodeURIComponent(String(username || '').trim().toLowerCase());
 }
 
+function normalizeAvatarUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
+  if (trimmed.startsWith('http://')) return `https://${trimmed.slice('http://'.length)}`;
+  return trimmed;
+}
+
 async function fetchJson(url) {
   const response = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!response.ok) {
@@ -19,7 +28,7 @@ export async function fetchPlayerProfile(username) {
   try {
     const payload = await fetchJson(`${CHESS_API_BASE}/${safeUsername(username)}`);
     return {
-      avatar: payload.avatar || null,
+      avatar: normalizeAvatarUrl(payload.avatar || payload.avatar_url || payload.image) || null,
       name: payload.name || null,
       username: payload.username || username,
       url: payload.url || null,
@@ -189,7 +198,7 @@ function extractGames(games, username) {
         opponent: opponent?.username || 'Inconnu',
         result: formatResult(game, username),
         color: isWhite ? 'white' : 'black',
-        opponentAvatar: opponent?.avatar || null,
+        opponentAvatar: normalizeAvatarUrl(opponent?.avatar) || null,
         opening: inferOpening(game),
         ratingDiff: mySide?.rating && mySide?.rating_diff ? Number(mySide.rating_diff) : null,
         url: game.url || null,
