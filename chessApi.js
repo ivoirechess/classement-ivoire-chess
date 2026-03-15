@@ -183,10 +183,11 @@ function formatResult(game, username) {
   return map[code] || code;
 }
 
-function extractGames(games, username) {
+function extractGames(games, username, mode = 'rapid') {
   const lower = username.toLowerCase();
+  const timeClass = mode === 'blitz' ? 'blitz' : mode === 'bullet' ? 'bullet' : 'rapid';
   return games
-    .filter((game) => ['rapid', 'blitz', 'bullet'].includes(game.time_class))
+    .filter((game) => game.time_class === timeClass)
     .sort((a, b) => new Date(b.end_time * 1000) - new Date(a.end_time * 1000))
     .slice(0, 10)
     .map((game) => {
@@ -210,7 +211,7 @@ function extractGames(games, username) {
  * Expose les parties du mois courant formatées pour l'affichage dans le modal.
  * Réutilise currentGames déjà chargées si disponibles, sinon recharge.
  */
-export async function fetchMonthlyGames(username, preloadedGames = null) {
+export async function fetchMonthlyGames(username, preloadedGames = null, mode = 'rapid') {
   if (!username) return [];
   try {
     let raw = preloadedGames;
@@ -218,7 +219,7 @@ export async function fetchMonthlyGames(username, preloadedGames = null) {
       const { current } = currentAndPrevMonth();
       raw = await fetchArchive(username, current.year, current.month);
     }
-    return extractGames(raw, username);
+    return extractGames(raw, username, mode);
   } catch {
     return [];
   }

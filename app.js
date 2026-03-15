@@ -7,6 +7,8 @@ import {
   topOpeningsFromGames,
 } from './chessApi.js';
 
+const MODE_LABEL = { rapid: 'Rapide', blitz: 'Blitz', bullet: 'Bullet' };
+
 const state = {
   mode: 'rapid',
   topLimit: 20,
@@ -499,7 +501,11 @@ async function showPlayerModal(id) {
   els.playerModal.showModal();
 
   // Réutilise les parties déjà chargées si disponibles
-  const games = await fetchMonthlyGames(player.username_chesscom, ctx.currentGames?.length ? ctx.currentGames : null);
+  const games = await fetchMonthlyGames(
+    player.username_chesscom,
+    ctx.currentGames?.length ? ctx.currentGames : null,
+    state.mode,
+  );
   const openings = topOpeningsFromGames(games);
 
   const openerRows = openings.length
@@ -558,7 +564,7 @@ async function showPlayerModal(id) {
       <div class="profile-hero-info">
         <p class="player-name">${player.display_name}</p>
         <p class="player-username">@${player.username_chesscom}</p>
-        <p class="meta-sub">${rank ? `#${rank} · ` : ''}${ratingData.rating} Elo ${state.mode}</p>
+        <p class="meta-sub">${rank ? `#${rank} · ` : ''}${ratingData.rating} Elo · ${MODE_LABEL[state.mode] || state.mode}</p>
       </div>
     </div>
 
