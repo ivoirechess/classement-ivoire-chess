@@ -86,6 +86,42 @@ function initials(name, username) {
     .join('');
 }
 
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function avatarFallbackMarkup(name, username, extraClasses = '') {
+  const classes = ['avatar', extraClasses, 'avatar-fallback'].filter(Boolean).join(' ');
+  return `<div class="${classes}">${initials(name, username)}</div>`;
+}
+
+function avatarMarkup(avatarUrl, name, username, extraClasses = '') {
+  if (!avatarUrl) return avatarFallbackMarkup(name, username, extraClasses);
+  const classes = ['avatar', extraClasses].filter(Boolean).join(' ');
+  return `<img class="${classes}" src="${escapeHtml(avatarUrl)}" alt="Avatar ${escapeHtml(name || username || 'joueur')}" loading="lazy" data-avatar-fallback="1" data-avatar-name="${escapeHtml(name || '')}" data-avatar-username="${escapeHtml(username || '')}" />`;
+}
+
+function installAvatarFallbackHandler() {
+  if (document.body.dataset.avatarFallbackReady === '1') return;
+  document.body.dataset.avatarFallbackReady = '1';
+
+  document.addEventListener('error', (event) => {
+    const node = event.target;
+    if (!(node instanceof HTMLImageElement) || !node.dataset.avatarFallback) return;
+
+    const classes = node.className || 'avatar';
+    const fallback = document.createElement('div');
+    fallback.className = `${classes} avatar-fallback`;
+    fallback.textContent = initials(node.dataset.avatarName || '', node.dataset.avatarUsername || '');
+    node.replaceWith(fallback);
+  }, true);
+}
+
 function rankMedal(rank) {
   if (rank === 1) return '🥇';
   if (rank === 2) return '🥈';
@@ -218,29 +254,33 @@ function renderPodium(rows) {
     return;
   }
 
-  const podiumOrder = [1, 0, 2]
-    .map((index) => top3[index])
-    .filter(Boolean);
+  // Ordre d'affichage visuel : 2 - 1 - 3
+  const displayOrder = [1, 0, 2];
+  const rankLabels = { 0: '🥇', 1: '🥈', 2: '🥉' };
+  const rankNumbers = { 0: '1', 1: '2', 2: '3' };
 
-  els.topThree.innerHTML = podiumOrder
-    .map((player) => {
-      const rank = top3.findIndex((p) => p.id === player.id) + 1;
-      const avatar = player.avatar
-        ? `<img class="avatar" src="${player.avatar}" alt="Avatar ${player.display_name}" loading="lazy" />`
-        : `<div class="avatar avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
+  els.topThree.innerHTML = displayOrder
+    .map((topIndex) => {
+      const player = top3[topIndex];
+      if (!player) return '';
+      const rank = topIndex + 1;
+      const avatar = avatarMarkup(player.avatar, player.display_name, player.username_chesscom);
       const progHtml = progressBadge(player.monthlyProgress, player.isInactive);
+
       return `
-        <article class="podium-card rank-${rank}" data-player="${player.id}">
-          <span class="podium-badge">${rankMedal(rank)} #${rank}</span>
-          <div class="podium-content">
+        <div class="podium-col rank-${rank}">
+          <article class="podium-card" data-player="${player.id}">
+            <span class="podium-badge">${rankLabels[topIndex]} #${rank}</span>
             ${avatar}
             <p class="player-name">${player.display_name}</p>
             <p class="player-username">@${player.username_chesscom}</p>
             <p class="player-rating">${player.rating} Elo</p>
             <p class="player-submetric">${progHtml} · ${player.games || 0} parties</p>
+          </article>
+          <div class="podium-step" aria-hidden="true">
+            <span class="podium-rank-label">${rankNumbers[topIndex]}</span>
           </div>
-          <div class="podium-step" aria-hidden="true"></div>
-        </article>
+        </div>
       `;
     })
     .join('');
@@ -269,9 +309,7 @@ function renderRanking() {
       const rank = idx + 1;
       const shift = state.rankingDeltaByUser.get(row.username_chesscom) || 0;
       const shiftClass = shift > 0 ? 'rank-up' : shift < 0 ? 'rank-down' : '';
-      const avatar = row.avatar
-        ? `<img class="avatar" src="${row.avatar}" alt="Avatar ${row.display_name}" loading="lazy" />`
-        : `<div class="avatar avatar-fallback">${initials(row.display_name, row.username_chesscom)}</div>`;
+      const avatar = avatarMarkup(row.avatar, row.display_name, row.username_chesscom);
       return `
         <article class="ranking-card ${shiftClass}" data-player="${row.id}" tabindex="0" role="button" aria-label="Voir détails ${row.display_name}">
           <p class="rank">${rankMedal(rank) || '#' + rank}</p>
@@ -478,9 +516,7 @@ async function showPlayerModal(id) {
         const kind = classifyResult(game.result);
         const labelMap = { win: 'Victoire', draw: 'Nulle', loss: 'Défaite' };
         const label = labelMap[kind];
-        const oppAvatar = game.opponentAvatar
-          ? `<img class="avatar opp-avatar" src="${game.opponentAvatar}" alt="${game.opponent}" loading="lazy" />`
-          : `<div class="avatar opp-avatar avatar-fallback">${initials(game.opponent, game.opponent)}</div>`;
+        const oppAvatar = avatarMarkup(game.opponentAvatar, game.opponent, game.opponent, 'opp-avatar');
         const colorDot = game.color === 'white'
           ? '<span class="color-dot white" title="Blancs"></span>'
           : '<span class="color-dot black" title="Noirs"></span>';
@@ -502,9 +538,7 @@ async function showPlayerModal(id) {
       }).join('')
     : '<p class="empty-state">Aucune partie ce mois.</p>';
 
-  const avatar = profile.avatar
-    ? `<img class="avatar avatar-xl" src="${profile.avatar}" alt="${player.display_name}"/>`
-    : `<div class="avatar avatar-xl avatar-fallback">${initials(player.display_name, player.username_chesscom)}</div>`;
+  const avatar = avatarMarkup(profile.avatar, player.display_name, player.username_chesscom, 'avatar-xl');
 
   // Ligne de référence mensuelle dans les stats
   const refLabel = ctx.isInactive
@@ -678,6 +712,7 @@ function bindEvents() {
 
 async function bootstrap() {
   bindEvents();
+  installAvatarFallbackHandler();
   initTabs();
   await ensureSession();
   await loadSharedData();
