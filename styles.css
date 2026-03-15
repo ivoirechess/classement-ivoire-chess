@@ -815,6 +815,10 @@ a:hover { color: var(--gold); text-decoration: underline; }
   margin-bottom: 4px;
 }
 
+.profile-mode-switch {
+  margin-bottom: 14px;
+}
+
 /* Panels côte à côte */
 .profile-panels {
   display: grid;
