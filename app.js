@@ -8,6 +8,11 @@ import {
 } from './chessApi.js';
 
 const MODE_LABEL = { rapid: 'Rapide', blitz: 'Blitz', bullet: 'Bullet' };
+const DEFAULT_REWARD_SETTINGS = {
+  topAmount: 10000,
+  progressAmount: 5000,
+  nextRewardAt: '',
+};
 
 const state = {
   mode: 'rapid',
@@ -27,6 +32,8 @@ const state = {
   isAdminCollapsed: false,
   playerModalMode: 'rapid',
   playerModalRequestId: 0,
+  rewardSettings: { ...DEFAULT_REWARD_SETTINGS },
+  rewardCandidates: { topPlayer: null, topProgress: null },
 };
 
 const els = {
@@ -51,6 +58,10 @@ const els = {
   addPlayerForm: document.getElementById('add-player-form'),
   topLimitForm: document.getElementById('top-limit-form'),
   topLimitInput: document.getElementById('top-limit-input'),
+  rewardSettingsForm: document.getElementById('reward-settings-form'),
+  rewardTopAmountInput: document.getElementById('reward-top-amount-input'),
+  rewardProgressAmountInput: document.getElementById('reward-progress-amount-input'),
+  rewardNextAtInput: document.getElementById('reward-next-at-input'),
   searchInput: document.getElementById('search-input'),
   sortHeaders: Array.from(document.querySelectorAll('.sort-head')),
   toastRegion: document.getElementById('toast-region'),
@@ -61,6 +72,11 @@ const els = {
   confirmText: document.getElementById('confirm-text'),
   confirmForm: document.getElementById('confirm-form'),
   confirmSubmitBtn: document.getElementById('confirm-submit-btn'),
+  insightCountdown: document.getElementById('insight-countdown'),
+  insightTopPlayer: document.getElementById('insight-top-player'),
+  insightTopProgress: document.getElementById('insight-top-progress'),
+  insightTopAmount: document.getElementById('insight-top-amount'),
+  insightProgressAmount: document.getElementById('insight-progress-amount'),
 };
 
 function setStatus(type, message) {
@@ -80,6 +96,33 @@ function toast(message, type = 'info') {
   els.toastRegion.appendChild(node);
   window.setTimeout(() => node.remove(), 3200);
 }
+
+function formatAmountFcfa(value) {
+  const amount = Number(value || 0);
+  return `${amount.toLocaleString('fr-FR')} FCFA`;
+}
+
+function parseRewardSettings(rows = []) {
+  const map = new Map(rows.map((row) => [row.key, row.value]));
+  const topAmount = Number(map.get('reward_top_amount') || DEFAULT_REWARD_SETTINGS.topAmount);
+  const progressAmount = Number(map.get('reward_progress_amount') || DEFAULT_REWARD_SETTINGS.progressAmount);
+  const nextRewardAt = map.get('reward_next_at') || computeNextRewardDate().toISOString();
+
+  return {
+    topAmount: Number.isFinite(topAmount) ? topAmount : DEFAULT_REWARD_SETTINGS.topAmount,
+    progressAmount: Number.isFinite(progressAmount) ? progressAmount : DEFAULT_REWARD_SETTINGS.progressAmount,
+    nextRewardAt,
+  };
+}
+
+function toDatetimeLocalValue(isoDateString) {
+  if (!isoDateString) return '';
+  const date = new Date(isoDateString);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 
 function initials(name, username) {
   const source = name || username || '?';
@@ -168,6 +211,103 @@ function progressBadge(value, isInactive = false) {
 function shortOpening(name = '', maxLen = 28) {
   if (!name || name === 'Ouverture non disponible') return '—';
   return name.length > maxLen ? name.slice(0, maxLen - 1) + '…' : name;
+}
+
+function computeNextRewardDate(now = new Date()) {
+  if (state.rewardSettings.nextRewardAt) {
+    const configured = new Date(state.rewardSettings.nextRewardAt);
+    if (!Number.isNaN(configured.getTime()) && configured.getTime() > now.getTime()) return configured;
+  }
+
+  const fallback = new Date(now);
+  fallback.setHours(10, 0, 0, 0);
+  if (now.getDate() === 1 && now < fallback) return fallback;
+  fallback.setMonth(fallback.getMonth() + 1, 1);
+  return fallback;
+}
+
+function formatCountdown(diffMs) {
+  if (diffMs <= 0) return 'Échéance atteinte';
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts = [];
+  if (days) parts.push(`${days}j`);
+  if (hours || days) parts.push(`${hours}h`);
+  parts.push(`${minutes}min`);
+  return parts.join(' ');
+}
+
+async function refreshRewardCandidates() {
+  const rapidSnapshots = await Promise.all(state.players.map(async (player) => {
+    const [rating, context] = await Promise.all([
+      fetchPlayerStats(player.username_chesscom, 'rapid'),
+      fetchMonthlyContext(player.username_chesscom, 'rapid'),
+    ]);
+
+    const monthlyProgress = (!context || context.isInactive || context.referenceRating === null)
+      ? null
+      : Number(rating.rating || 0) - Number(context.referenceRating || 0);
+
+    return {
+      player,
+      rating: Number(rating.rating || 0),
+      games: Number(rating.games || 0),
+      isInactive: Boolean(context?.isInactive),
+      monthlyProgress,
+    };
+  }));
+
+  const topPlayer = rapidSnapshots.sort((a, b) => b.rating - a.rating)[0] || null;
+  const topProgress = rapidSnapshots
+    .filter((entry) => !entry.isInactive && entry.games > 0 && typeof entry.monthlyProgress === 'number' && !Number.isNaN(entry.monthlyProgress))
+    .sort((a, b) => b.monthlyProgress - a.monthlyProgress)[0] || null;
+
+  state.rewardCandidates = {
+    topPlayer: topPlayer ? {
+      display_name: topPlayer.player.display_name,
+      rating: topPlayer.rating,
+    } : null,
+    topProgress: topProgress ? {
+      display_name: topProgress.player.display_name,
+      monthlyProgress: topProgress.monthlyProgress,
+    } : null,
+  };
+}
+
+function updateRewardInsights() {
+  const { topPlayer, topProgress } = state.rewardCandidates;
+
+  if (els.insightTopAmount) els.insightTopAmount.textContent = `Récompense: ${formatAmountFcfa(state.rewardSettings.topAmount)}`;
+  if (els.insightProgressAmount) els.insightProgressAmount.textContent = `Récompense: ${formatAmountFcfa(state.rewardSettings.progressAmount)}`;
+
+  if (els.insightTopPlayer) {
+    els.insightTopPlayer.textContent = topPlayer
+      ? `${topPlayer.display_name} (${topPlayer.rating} Elo rapide)`
+      : 'Aucun candidat';
+  }
+
+  if (els.insightTopProgress) {
+    els.insightTopProgress.textContent = topProgress
+      ? `${topProgress.display_name} (${topProgress.monthlyProgress > 0 ? '+' : ''}${topProgress.monthlyProgress} Elo rapide)`
+      : 'Aucune progression active';
+  }
+
+  const now = new Date();
+  const nextRewardDate = computeNextRewardDate(now);
+  const diff = nextRewardDate.getTime() - now.getTime();
+  if (els.insightCountdown) {
+    els.insightCountdown.textContent = `${formatCountdown(diff)} · ${nextRewardDate.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+  }
 }
 
 /**
@@ -302,6 +442,7 @@ function renderRanking() {
 
   updateSortUi();
   renderPodium(rows);
+  updateRewardInsights();
 
   if (!rows.length) {
     els.rankingList.innerHTML = '<p class="empty-state">Aucun joueur actif pour ce filtre.</p>';
@@ -356,9 +497,9 @@ async function loadSharedData() {
   setStatus('info', 'Synchronisation Supabase en cours...');
   els.rankingList.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
 
-  const [{ data: players, error: playersError }, { data: setting, error: settingError }] = await Promise.all([
+  const [{ data: players, error: playersError }, { data: settingsRows, error: settingError }] = await Promise.all([
     supabase.from('players').select('*').eq('is_active', true).order('created_at', { ascending: true }),
-    supabase.from('app_settings').select('value').eq('key', 'top_limit').single(),
+    supabase.from('app_settings').select('key, value').in('key', ['top_limit', 'reward_top_amount', 'reward_progress_amount', 'reward_next_at']),
   ]);
 
   if (playersError || settingError) {
@@ -369,10 +510,18 @@ async function loadSharedData() {
   }
 
   state.players = players;
-  state.topLimit = Number(setting?.value || 20);
+  const settingsMap = new Map((settingsRows || []).map((row) => [row.key, row.value]));
+  state.topLimit = Number(settingsMap.get('top_limit') || 20);
+  state.rewardSettings = parseRewardSettings(settingsRows || []);
+
   els.topLimitInput.value = String(state.topLimit);
+  if (els.rewardTopAmountInput) els.rewardTopAmountInput.value = String(state.rewardSettings.topAmount);
+  if (els.rewardProgressAmountInput) els.rewardProgressAmountInput.value = String(state.rewardSettings.progressAmount);
+  if (els.rewardNextAtInput) els.rewardNextAtInput.value = toDatetimeLocalValue(state.rewardSettings.nextRewardAt);
 
   await refreshRatings();
+  await refreshRewardCandidates();
+  updateRewardInsights();
   renderAdminPlayers();
   setOffline(false);
   const now = new Date();
@@ -483,6 +632,32 @@ async function updateTopLimit(event) {
   }
   setAdminStatus('success', 'Top limit mis à jour.');
   toast('Top limit mis à jour.', 'success');
+}
+
+async function updateRewardSettings(event) {
+  event.preventDefault();
+
+  const topAmount = Number(els.rewardTopAmountInput?.value || DEFAULT_REWARD_SETTINGS.topAmount);
+  const progressAmount = Number(els.rewardProgressAmountInput?.value || DEFAULT_REWARD_SETTINGS.progressAmount);
+  const nextAtLocal = els.rewardNextAtInput?.value || '';
+  const nextAtIso = nextAtLocal ? new Date(nextAtLocal).toISOString() : '';
+
+  const payload = [
+    { key: 'reward_top_amount', value: String(topAmount) },
+    { key: 'reward_progress_amount', value: String(progressAmount) },
+    { key: 'reward_next_at', value: nextAtIso },
+  ];
+
+  const { error } = await supabase.from('app_settings').upsert(payload);
+  if (error) {
+    setAdminStatus('error', `Mise à jour récompenses refusée: ${error.message}`);
+    return;
+  }
+
+  state.rewardSettings = { topAmount, progressAmount, nextRewardAt: nextAtIso };
+  updateRewardInsights();
+  setAdminStatus('success', 'Paramètres des récompenses mis à jour.');
+  toast('Récompenses mises à jour.', 'success');
 }
 
 function playerById(id) {
@@ -700,6 +875,7 @@ function bindEvents() {
   els.loginForm.addEventListener('submit', loginAdmin);
   els.addPlayerForm.addEventListener('submit', addPlayer);
   els.topLimitForm.addEventListener('submit', updateTopLimit);
+  els.rewardSettingsForm?.addEventListener('submit', updateRewardSettings);
 
   els.searchInput.addEventListener('input', (e) => {
     state.search = e.target.value.trim();
@@ -753,6 +929,8 @@ async function bootstrap() {
   await ensureSession();
   await loadSharedData();
   subscribeRealtime();
+  window.setInterval(updateRewardInsights, 60000);
 }
+
 
 bootstrap();

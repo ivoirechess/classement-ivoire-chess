@@ -55,6 +55,25 @@
       <div class="section-label">Podium</div>
       <div id="top-three" class="top-three"></div>
 
+      <div class="section-label">Insights récompenses</div>
+      <section class="insights-grid" aria-label="Insights des récompenses mensuelles">
+        <article class="insight-card">
+          <p class="insight-label">⏳ Prochaine remise</p>
+          <p id="insight-countdown" class="insight-value">—</p>
+          <p class="insight-sub">Date et heure configurées par l'admin</p>
+        </article>
+        <article class="insight-card">
+          <p class="insight-label">🏆 Meilleur joueur</p>
+          <p id="insight-top-player" class="insight-value">—</p>
+          <p id="insight-top-amount" class="insight-sub">Récompense: —</p>
+        </article>
+        <article class="insight-card">
+          <p class="insight-label">📈 Meilleure progression</p>
+          <p id="insight-top-progress" class="insight-value">—</p>
+          <p id="insight-progress-amount" class="insight-sub">Récompense: —</p>
+        </article>
+      </section>
+
       <!-- RANKING -->
       <div class="section-label">Classement complet</div>
       <div class="ranking-head" role="row">
@@ -99,6 +118,19 @@
             <input id="top-limit-input" type="number" min="1" max="100" required style="width:90px;" />
           </label>
           <button class="btn btn-violet" type="submit">Mettre à jour</button>
+        </form>
+
+        <form id="reward-settings-form" class="panel-grid">
+          <label>Montant meilleur joueur (FCFA)
+            <input id="reward-top-amount-input" type="number" min="0" step="500" required />
+          </label>
+          <label>Montant meilleure progression (FCFA)
+            <input id="reward-progress-amount-input" type="number" min="0" step="500" required />
+          </label>
+          <label>Date + heure prochaine récompense
+            <input id="reward-next-at-input" type="datetime-local" required />
+          </label>
+          <button class="btn btn-violet" type="submit">Mettre à jour les récompenses</button>
         </form>
 
         <h3>Joueurs actifs</h3>
