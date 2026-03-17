@@ -94,7 +94,11 @@ using (auth.uid() = user_id);
 
 -- Valeur initiale
 insert into public.app_settings(key, value)
-values ('top_limit', '20')
+values
+  ('top_limit', '20'),
+  ('reward_top_amount', '10000'),
+  ('reward_progress_amount', '5000'),
+  ('reward_next_at', '')
 on conflict (key) do update set value = excluded.value;
 
 -- IMPORTANT: après création du compte admin via Supabase Auth, exécuter:
