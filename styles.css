@@ -996,6 +996,23 @@ a:hover { color: var(--gold); text-decoration: underline; }
   padding: 14px;
 }
 
+.insight-card-winner {
+  text-align: center;
+}
+
+.insight-avatar-slot {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.insight-avatar {
+  width: 72px;
+  height: 72px;
+  border: 2px solid rgba(184, 144, 10, 0.45);
+  box-shadow: 0 6px 20px rgba(80, 60, 20, 0.12);
+}
+
 .insight-label {
   font-size: 11px;
   text-transform: uppercase;

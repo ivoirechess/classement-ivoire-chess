@@ -51,28 +51,30 @@
       <div id="status" class="status info">Chargement des données…</div>
       <div id="offline-banner" class="status error hidden">Mode dégradé : problème réseau ou API Chess.com indisponible.</div>
 
-      <!-- PODIUM -->
-      <div class="section-label">Podium</div>
-      <div id="top-three" class="top-three"></div>
-
       <div class="section-label">Insights récompenses</div>
       <section class="insights-grid" aria-label="Insights des récompenses mensuelles">
-        <article class="insight-card">
+        <article class="insight-card insight-card-countdown">
           <p class="insight-label">⏳ Prochaine remise</p>
           <p id="insight-countdown" class="insight-value">—</p>
-          <p class="insight-sub">Date et heure configurées par l'admin</p>
+          <p id="insight-countdown-sub" class="insight-sub">Date et heure configurées par l'admin</p>
         </article>
-        <article class="insight-card">
-          <p class="insight-label">🏆 Meilleur joueur</p>
+        <article class="insight-card insight-card-winner">
+          <p id="insight-top-player-label" class="insight-label">🏆 Potentiel meilleur joueur</p>
+          <div id="insight-top-player-avatar" class="insight-avatar-slot"></div>
           <p id="insight-top-player" class="insight-value">—</p>
           <p id="insight-top-amount" class="insight-sub">Récompense: —</p>
         </article>
-        <article class="insight-card">
-          <p class="insight-label">📈 Meilleure progression</p>
+        <article class="insight-card insight-card-winner">
+          <p id="insight-top-progress-label" class="insight-label">📈 Potentielle meilleure progression</p>
+          <div id="insight-top-progress-avatar" class="insight-avatar-slot"></div>
           <p id="insight-top-progress" class="insight-value">—</p>
           <p id="insight-progress-amount" class="insight-sub">Récompense: —</p>
         </article>
       </section>
+
+      <!-- PODIUM -->
+      <div class="section-label">Podium</div>
+      <div id="top-three" class="top-three"></div>
 
       <!-- RANKING -->
       <div class="section-label">Classement complet</div>
