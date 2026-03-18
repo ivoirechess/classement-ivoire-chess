@@ -12,6 +12,14 @@ const DEFAULT_REWARD_SETTINGS = {
   topAmount: 10000,
   progressAmount: 5000,
   nextRewardAt: '',
+  isFrozen: false,
+  frozenAt: '',
+  topWinnerUsername: '',
+  topWinnerName: '',
+  topWinnerRating: '',
+  progressWinnerUsername: '',
+  progressWinnerName: '',
+  progressWinnerValue: '',
 };
 
 const state = {
@@ -34,6 +42,7 @@ const state = {
   playerModalRequestId: 0,
   rewardSettings: { ...DEFAULT_REWARD_SETTINGS },
   rewardCandidates: { topPlayer: null, topProgress: null },
+  rewardFreezeSyncInProgress: false,
 };
 
 const els = {
@@ -77,6 +86,11 @@ const els = {
   insightTopProgress: document.getElementById('insight-top-progress'),
   insightTopAmount: document.getElementById('insight-top-amount'),
   insightProgressAmount: document.getElementById('insight-progress-amount'),
+  insightTopPlayerAvatar: document.getElementById('insight-top-player-avatar'),
+  insightTopProgressAvatar: document.getElementById('insight-top-progress-avatar'),
+  insightTopPlayerLabel: document.getElementById('insight-top-player-label'),
+  insightTopProgressLabel: document.getElementById('insight-top-progress-label'),
+  insightCountdownSub: document.getElementById('insight-countdown-sub'),
 };
 
 function setStatus(type, message) {
@@ -107,11 +121,21 @@ function parseRewardSettings(rows = []) {
   const topAmount = Number(map.get('reward_top_amount') || DEFAULT_REWARD_SETTINGS.topAmount);
   const progressAmount = Number(map.get('reward_progress_amount') || DEFAULT_REWARD_SETTINGS.progressAmount);
   const nextRewardAt = map.get('reward_next_at') || computeNextRewardDate().toISOString();
+  const isFrozen = map.get('reward_is_frozen') === '1';
+  const frozenAt = map.get('reward_frozen_at') || '';
 
   return {
     topAmount: Number.isFinite(topAmount) ? topAmount : DEFAULT_REWARD_SETTINGS.topAmount,
     progressAmount: Number.isFinite(progressAmount) ? progressAmount : DEFAULT_REWARD_SETTINGS.progressAmount,
     nextRewardAt,
+    isFrozen,
+    frozenAt,
+    topWinnerUsername: map.get('reward_top_winner_username') || '',
+    topWinnerName: map.get('reward_top_winner_name') || '',
+    topWinnerRating: map.get('reward_top_winner_rating') || '',
+    progressWinnerUsername: map.get('reward_progress_winner_username') || '',
+    progressWinnerName: map.get('reward_progress_winner_name') || '',
+    progressWinnerValue: map.get('reward_progress_winner_value') || '',
   };
 }
 
@@ -242,6 +266,24 @@ function formatCountdown(diffMs) {
 }
 
 async function refreshRewardCandidates() {
+  if (state.rewardSettings.isFrozen) {
+    state.rewardCandidates = {
+      topPlayer: state.rewardSettings.topWinnerUsername ? {
+        display_name: state.rewardSettings.topWinnerName || state.rewardSettings.topWinnerUsername,
+        username: state.rewardSettings.topWinnerUsername,
+        avatar: state.profilesByUser.get(state.rewardSettings.topWinnerUsername)?.avatar || null,
+        rating: Number(state.rewardSettings.topWinnerRating || 0),
+      } : null,
+      topProgress: state.rewardSettings.progressWinnerUsername ? {
+        display_name: state.rewardSettings.progressWinnerName || state.rewardSettings.progressWinnerUsername,
+        username: state.rewardSettings.progressWinnerUsername,
+        avatar: state.profilesByUser.get(state.rewardSettings.progressWinnerUsername)?.avatar || null,
+        monthlyProgress: Number(state.rewardSettings.progressWinnerValue || 0),
+      } : null,
+    };
+    return;
+  }
+
   const rapidSnapshots = await Promise.all(state.players.map(async (player) => {
     const [rating, context] = await Promise.all([
       fetchPlayerStats(player.username_chesscom, 'rapid'),
@@ -269,44 +311,120 @@ async function refreshRewardCandidates() {
   state.rewardCandidates = {
     topPlayer: topPlayer ? {
       display_name: topPlayer.player.display_name,
+      username: topPlayer.player.username_chesscom,
+      avatar: state.profilesByUser.get(topPlayer.player.username_chesscom)?.avatar || null,
       rating: topPlayer.rating,
     } : null,
     topProgress: topProgress ? {
       display_name: topProgress.player.display_name,
+      username: topProgress.player.username_chesscom,
+      avatar: state.profilesByUser.get(topProgress.player.username_chesscom)?.avatar || null,
       monthlyProgress: topProgress.monthlyProgress,
     } : null,
   };
 }
 
+async function freezeRewardWinnersIfNeeded() {
+  if (state.rewardFreezeSyncInProgress) return;
+  if (state.rewardSettings.isFrozen) return;
+
+  const now = new Date();
+  const target = new Date(state.rewardSettings.nextRewardAt);
+  if (Number.isNaN(target.getTime()) || now.getTime() < target.getTime()) return;
+
+  state.rewardFreezeSyncInProgress = true;
+  const frozenAt = now.toISOString();
+  const topPlayer = state.rewardCandidates.topPlayer;
+  const topProgress = state.rewardCandidates.topProgress;
+
+  const payload = [
+    { key: 'reward_is_frozen', value: '1' },
+    { key: 'reward_frozen_at', value: frozenAt },
+    { key: 'reward_top_winner_username', value: topPlayer?.username || '' },
+    { key: 'reward_top_winner_name', value: topPlayer?.display_name || '' },
+    { key: 'reward_top_winner_rating', value: String(topPlayer?.rating ?? '') },
+    { key: 'reward_progress_winner_username', value: topProgress?.username || '' },
+    { key: 'reward_progress_winner_name', value: topProgress?.display_name || '' },
+    { key: 'reward_progress_winner_value', value: String(topProgress?.monthlyProgress ?? '') },
+  ];
+
+  const { error } = await supabase.from('app_settings').upsert(payload);
+  state.rewardFreezeSyncInProgress = false;
+
+  if (error) {
+    toast(`Impossible de figer les lauréats: ${error.message}`, 'error');
+    return;
+  }
+
+  state.rewardSettings.isFrozen = true;
+  state.rewardSettings.frozenAt = frozenAt;
+  state.rewardSettings.topWinnerUsername = topPlayer?.username || '';
+  state.rewardSettings.topWinnerName = topPlayer?.display_name || '';
+  state.rewardSettings.topWinnerRating = String(topPlayer?.rating ?? '');
+  state.rewardSettings.progressWinnerUsername = topProgress?.username || '';
+  state.rewardSettings.progressWinnerName = topProgress?.display_name || '';
+  state.rewardSettings.progressWinnerValue = String(topProgress?.monthlyProgress ?? '');
+}
+
 function updateRewardInsights() {
   const { topPlayer, topProgress } = state.rewardCandidates;
+  const isFrozen = Boolean(state.rewardSettings.isFrozen);
 
   if (els.insightTopAmount) els.insightTopAmount.textContent = `Récompense: ${formatAmountFcfa(state.rewardSettings.topAmount)}`;
   if (els.insightProgressAmount) els.insightProgressAmount.textContent = `Récompense: ${formatAmountFcfa(state.rewardSettings.progressAmount)}`;
+  if (els.insightTopPlayerLabel) {
+    els.insightTopPlayerLabel.textContent = isFrozen ? '🏆 Lauréat du mois (meilleur joueur)' : '🏆 Potentiel meilleur joueur';
+  }
+  if (els.insightTopProgressLabel) {
+    els.insightTopProgressLabel.textContent = isFrozen ? '📈 Lauréat du mois (progression)' : '📈 Potentielle meilleure progression';
+  }
 
   if (els.insightTopPlayer) {
     els.insightTopPlayer.textContent = topPlayer
       ? `${topPlayer.display_name} (${topPlayer.rating} Elo rapide)`
-      : 'Aucun candidat';
+      : (isFrozen ? 'Aucun lauréat enregistré' : 'Aucun candidat');
+  }
+  if (els.insightTopPlayerAvatar) {
+    els.insightTopPlayerAvatar.innerHTML = topPlayer
+      ? avatarMarkup(topPlayer.avatar, topPlayer.display_name, topPlayer.username, 'insight-avatar')
+      : avatarFallbackMarkup('?', '?', 'insight-avatar');
   }
 
   if (els.insightTopProgress) {
     els.insightTopProgress.textContent = topProgress
       ? `${topProgress.display_name} (${topProgress.monthlyProgress > 0 ? '+' : ''}${topProgress.monthlyProgress} Elo rapide)`
-      : 'Aucune progression active';
+      : (isFrozen ? 'Aucun lauréat enregistré' : 'Aucune progression active');
+  }
+  if (els.insightTopProgressAvatar) {
+    els.insightTopProgressAvatar.innerHTML = topProgress
+      ? avatarMarkup(topProgress.avatar, topProgress.display_name, topProgress.username, 'insight-avatar')
+      : avatarFallbackMarkup('?', '?', 'insight-avatar');
   }
 
   const now = new Date();
   const nextRewardDate = computeNextRewardDate(now);
   const diff = nextRewardDate.getTime() - now.getTime();
   if (els.insightCountdown) {
-    els.insightCountdown.textContent = `${formatCountdown(diff)} · ${nextRewardDate.toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
+    if (isFrozen) {
+      els.insightCountdown.textContent = 'Résultats figés';
+      if (els.insightCountdownSub) {
+        const frozenAt = state.rewardSettings.frozenAt ? new Date(state.rewardSettings.frozenAt) : null;
+        els.insightCountdownSub.textContent = frozenAt && !Number.isNaN(frozenAt.getTime())
+          ? `Lauréats verrouillés le ${frozenAt.toLocaleString('fr-FR')}`
+          : 'Lauréats verrouillés jusqu’à la prochaine date de récompense';
+      }
+    } else {
+      els.insightCountdown.textContent = `${formatCountdown(diff)} · ${nextRewardDate.toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`;
+      if (els.insightCountdownSub) {
+        els.insightCountdownSub.textContent = 'Date et heure configurées par l\'admin';
+      }
+    }
   }
 }
 
@@ -499,7 +617,20 @@ async function loadSharedData() {
 
   const [{ data: players, error: playersError }, { data: settingsRows, error: settingError }] = await Promise.all([
     supabase.from('players').select('*').eq('is_active', true).order('created_at', { ascending: true }),
-    supabase.from('app_settings').select('key, value').in('key', ['top_limit', 'reward_top_amount', 'reward_progress_amount', 'reward_next_at']),
+    supabase.from('app_settings').select('key, value').in('key', [
+      'top_limit',
+      'reward_top_amount',
+      'reward_progress_amount',
+      'reward_next_at',
+      'reward_is_frozen',
+      'reward_frozen_at',
+      'reward_top_winner_username',
+      'reward_top_winner_name',
+      'reward_top_winner_rating',
+      'reward_progress_winner_username',
+      'reward_progress_winner_name',
+      'reward_progress_winner_value',
+    ]),
   ]);
 
   if (playersError || settingError) {
@@ -520,6 +651,8 @@ async function loadSharedData() {
   if (els.rewardNextAtInput) els.rewardNextAtInput.value = toDatetimeLocalValue(state.rewardSettings.nextRewardAt);
 
   await refreshRatings();
+  await refreshRewardCandidates();
+  await freezeRewardWinnersIfNeeded();
   await refreshRewardCandidates();
   updateRewardInsights();
   renderAdminPlayers();
@@ -646,6 +779,14 @@ async function updateRewardSettings(event) {
     { key: 'reward_top_amount', value: String(topAmount) },
     { key: 'reward_progress_amount', value: String(progressAmount) },
     { key: 'reward_next_at', value: nextAtIso },
+    { key: 'reward_is_frozen', value: '0' },
+    { key: 'reward_frozen_at', value: '' },
+    { key: 'reward_top_winner_username', value: '' },
+    { key: 'reward_top_winner_name', value: '' },
+    { key: 'reward_top_winner_rating', value: '' },
+    { key: 'reward_progress_winner_username', value: '' },
+    { key: 'reward_progress_winner_name', value: '' },
+    { key: 'reward_progress_winner_value', value: '' },
   ];
 
   const { error } = await supabase.from('app_settings').upsert(payload);
@@ -654,7 +795,21 @@ async function updateRewardSettings(event) {
     return;
   }
 
-  state.rewardSettings = { topAmount, progressAmount, nextRewardAt: nextAtIso };
+  state.rewardSettings = {
+    ...state.rewardSettings,
+    topAmount,
+    progressAmount,
+    nextRewardAt: nextAtIso,
+    isFrozen: false,
+    frozenAt: '',
+    topWinnerUsername: '',
+    topWinnerName: '',
+    topWinnerRating: '',
+    progressWinnerUsername: '',
+    progressWinnerName: '',
+    progressWinnerValue: '',
+  };
+  await refreshRewardCandidates();
   updateRewardInsights();
   setAdminStatus('success', 'Paramètres des récompenses mis à jour.');
   toast('Récompenses mises à jour.', 'success');
@@ -929,7 +1084,12 @@ async function bootstrap() {
   await ensureSession();
   await loadSharedData();
   subscribeRealtime();
-  window.setInterval(updateRewardInsights, 60000);
+  window.setInterval(async () => {
+    await refreshRewardCandidates();
+    await freezeRewardWinnersIfNeeded();
+    await refreshRewardCandidates();
+    updateRewardInsights();
+  }, 60000);
 }
 
 
