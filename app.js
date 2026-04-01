@@ -28,6 +28,7 @@ const CHESS_QUOTES = [
   '« Dans une position difficile, cherche les ressources cachées. » — David Bronstein',
 ];
 const DEFAULT_REWARD_SETTINGS = {
+  enabled: true,
   topAmount: 10000,
   progressAmount: 5000,
   nextRewardAt: '',
@@ -113,6 +114,7 @@ const els = {
   rewardTopAmountInput: document.getElementById('reward-top-amount-input'),
   rewardProgressAmountInput: document.getElementById('reward-progress-amount-input'),
   rewardNextAtInput: document.getElementById('reward-next-at-input'),
+  rewardEnabledInput: document.getElementById('reward-enabled-input'),
   refDateModeRadios: Array.from(document.querySelectorAll('input[name="ref-date-mode"]')),
   refDateStartInput: document.getElementById('ref-date-start-input'),
   refDateEndInput: document.getElementById('ref-date-end-input'),
@@ -177,6 +179,7 @@ function formatAmountFcfa(value) {
 
 function parseRewardSettings(rows = []) {
   const map = new Map(rows.map((row) => [row.key, row.value]));
+  const enabled = map.get('reward_enabled') !== '0';
   const topAmount = Number(map.get('reward_top_amount') || DEFAULT_REWARD_SETTINGS.topAmount);
   const progressAmount = Number(map.get('reward_progress_amount') || DEFAULT_REWARD_SETTINGS.progressAmount);
   const nextRewardAt = map.get('reward_next_at') || computeNextRewardDate().toISOString();
@@ -184,6 +187,7 @@ function parseRewardSettings(rows = []) {
   const frozenAt = map.get('reward_frozen_at') || '';
 
   return {
+    enabled,
     topAmount: Number.isFinite(topAmount) ? topAmount : DEFAULT_REWARD_SETTINGS.topAmount,
     progressAmount: Number.isFinite(progressAmount) ? progressAmount : DEFAULT_REWARD_SETTINGS.progressAmount,
     nextRewardAt,
@@ -506,6 +510,11 @@ function computeBadges(row, context = {}) {
 }
 
 async function refreshRewardCandidates() {
+  if (!state.rewardSettings.enabled) {
+    state.rewardCandidates = { topPlayer: null, topProgress: null };
+    return;
+  }
+
   if (state.rewardSettings.isFrozen) {
     state.rewardCandidates = {
       topPlayer: state.rewardSettings.topWinnerUsername ? {
@@ -569,6 +578,7 @@ async function refreshRewardCandidates() {
 
 async function freezeRewardWinnersIfNeeded() {
   if (state.rewardFreezeSyncInProgress) return;
+  if (!state.rewardSettings.enabled) return;
   if (state.rewardSettings.isFrozen) return;
 
   const now = new Date();
@@ -612,9 +622,18 @@ async function freezeRewardWinnersIfNeeded() {
 function updateRewardInsights() {
   const { topPlayer, topProgress } = state.rewardCandidates;
   const isFrozen = Boolean(state.rewardSettings.isFrozen);
+  const rewardsEnabled = Boolean(state.rewardSettings.enabled);
 
-  if (els.insightTopAmount) els.insightTopAmount.textContent = `Récompense: ${formatAmountFcfa(state.rewardSettings.topAmount)}`;
-  if (els.insightProgressAmount) els.insightProgressAmount.textContent = `Récompense: ${formatAmountFcfa(state.rewardSettings.progressAmount)}`;
+  if (els.insightTopAmount) {
+    els.insightTopAmount.textContent = rewardsEnabled
+      ? `Récompense: ${formatAmountFcfa(state.rewardSettings.topAmount)}`
+      : 'Récompenses désactivées';
+  }
+  if (els.insightProgressAmount) {
+    els.insightProgressAmount.textContent = rewardsEnabled
+      ? `Récompense: ${formatAmountFcfa(state.rewardSettings.progressAmount)}`
+      : 'Récompenses désactivées';
+  }
   if (els.insightTopPlayerLabel) {
     els.insightTopPlayerLabel.textContent = isFrozen ? '🏆 Lauréat du mois (meilleur joueur)' : '🏆 Potentiel meilleur joueur';
   }
@@ -623,7 +642,9 @@ function updateRewardInsights() {
   }
 
   if (els.insightTopPlayer) {
-    els.insightTopPlayer.textContent = topPlayer
+    els.insightTopPlayer.textContent = !rewardsEnabled
+      ? 'Récompenses en pause'
+      : topPlayer
       ? `${topPlayer.display_name} (${topPlayer.rating} Elo rapide)`
       : (isFrozen ? 'Aucun lauréat enregistré' : 'Aucun candidat');
   }
@@ -634,7 +655,9 @@ function updateRewardInsights() {
   }
 
   if (els.insightTopProgress) {
-    els.insightTopProgress.textContent = topProgress
+    els.insightTopProgress.textContent = !rewardsEnabled
+      ? 'Récompenses en pause'
+      : topProgress
       ? `${topProgress.display_name} (${topProgress.monthlyProgress > 0 ? '+' : ''}${topProgress.monthlyProgress} Elo rapide)`
       : (isFrozen ? 'Aucun lauréat enregistré' : 'Aucune progression active');
   }
@@ -648,7 +671,12 @@ function updateRewardInsights() {
   const nextRewardDate = computeNextRewardDate(now);
   const diff = nextRewardDate.getTime() - now.getTime();
   if (els.insightCountdown) {
-    if (isFrozen) {
+    if (!rewardsEnabled) {
+      els.insightCountdown.textContent = 'En pause';
+      if (els.insightCountdownSub) {
+        els.insightCountdownSub.textContent = 'Les récompenses mensuelles sont désactivées par l’admin.';
+      }
+    } else if (isFrozen) {
       els.insightCountdown.textContent = 'Résultats figés';
       if (els.insightCountdownSub) {
         const frozenAt = state.rewardSettings.frozenAt ? new Date(state.rewardSettings.frozenAt) : null;
@@ -1109,6 +1137,7 @@ async function loadSharedData({ forceRefresh = false } = {}) {
       'reward_top_amount',
       'reward_progress_amount',
       'reward_next_at',
+      'reward_enabled',
       'reward_is_frozen',
       'reward_frozen_at',
       'reward_top_winner_username',
@@ -1146,6 +1175,7 @@ async function loadSharedData({ forceRefresh = false } = {}) {
   if (els.rewardTopAmountInput) els.rewardTopAmountInput.value = String(state.rewardSettings.topAmount);
   if (els.rewardProgressAmountInput) els.rewardProgressAmountInput.value = String(state.rewardSettings.progressAmount);
   if (els.rewardNextAtInput) els.rewardNextAtInput.value = toDatetimeLocalValue(state.rewardSettings.nextRewardAt);
+  if (els.rewardEnabledInput) els.rewardEnabledInput.checked = Boolean(state.rewardSettings.enabled);
   renderRefDateModeUi();
 
   await refreshRatings();
@@ -1385,6 +1415,7 @@ async function updateRewardSettings(event) {
   const progressAmount = Number(els.rewardProgressAmountInput?.value || DEFAULT_REWARD_SETTINGS.progressAmount);
   const nextAtLocal = els.rewardNextAtInput?.value || '';
   const nextAtIso = nextAtLocal ? new Date(nextAtLocal).toISOString() : '';
+  const rewardEnabled = Boolean(els.rewardEnabledInput?.checked);
   const refMode = els.refDateModeRadios.find((radio) => radio.checked)?.value || 'auto';
   const refStart = refMode === 'manual' ? (els.refDateStartInput?.value || '') : '';
   const refEnd = refMode === 'manual' ? (els.refDateEndInput?.value || '') : '';
@@ -1393,6 +1424,7 @@ async function updateRewardSettings(event) {
     { key: 'reward_top_amount', value: String(topAmount) },
     { key: 'reward_progress_amount', value: String(progressAmount) },
     { key: 'reward_next_at', value: nextAtIso },
+    { key: 'reward_enabled', value: rewardEnabled ? '1' : '0' },
     { key: 'reward_is_frozen', value: '0' },
     { key: 'reward_frozen_at', value: '' },
     { key: 'reward_top_winner_username', value: '' },
@@ -1414,6 +1446,7 @@ async function updateRewardSettings(event) {
 
   state.rewardSettings = {
     ...state.rewardSettings,
+    enabled: rewardEnabled,
     topAmount,
     progressAmount,
     nextRewardAt: nextAtIso,
