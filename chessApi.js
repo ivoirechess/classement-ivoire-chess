@@ -262,13 +262,12 @@ function formatResult(game, username) {
   return map[code] || code;
 }
 
-function extractGames(games, username, mode = 'rapid') {
+function extractGames(games, username, mode = 'rapid', limit = 10) {
   const lower = username.toLowerCase();
   const timeClass = modeToTimeClass(mode);
-  return games
+  const prepared = games
     .filter((game) => game.time_class === timeClass)
     .sort((a, b) => new Date(b.end_time * 1000) - new Date(a.end_time * 1000))
-    .slice(0, 10)
     .map((game) => {
       const isWhite = game.white?.username?.toLowerCase() === lower;
       const mySide = isWhite ? game.white : game.black;
@@ -284,6 +283,8 @@ function extractGames(games, username, mode = 'rapid') {
         url: game.url || null,
       };
     });
+  if (!Number.isFinite(limit) || limit < 0) return prepared;
+  return prepared.slice(0, limit);
 }
 
 export async function fetchRecentArchives(username, mode, monthsBack = 3) {
@@ -336,6 +337,42 @@ export async function fetchMonthlyGames(username, preloadedGames = null, mode = 
   } catch {
     return [];
   }
+}
+
+function monthBucketsBetween(startDate, endDate) {
+  const buckets = [];
+  const cursor = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+  const endCursor = new Date(Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), 1));
+
+  while (cursor <= endCursor) {
+    buckets.push({ year: cursor.getUTCFullYear(), month: cursor.getUTCMonth() + 1 });
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return buckets;
+}
+
+export async function fetchGamesInDateRange(username, mode = 'rapid', options = {}) {
+  if (!username) return [];
+  const refDateStart = options?.refDateStart instanceof Date ? new Date(options.refDateStart) : null;
+  const refDateEnd = options?.refDateEnd instanceof Date ? new Date(options.refDateEnd) : null;
+  if (!refDateStart || !refDateEnd) {
+    return fetchMonthlyGames(username, null, mode);
+  }
+
+  refDateStart.setUTCHours(0, 0, 0, 0);
+  refDateEnd.setUTCHours(23, 59, 59, 999);
+  if (refDateStart > refDateEnd) return [];
+
+  const startSec = Math.floor(refDateStart.getTime() / 1000);
+  const endSec = Math.floor(refDateEnd.getTime() / 1000);
+  const buckets = monthBucketsBetween(refDateStart, refDateEnd);
+  const archives = await Promise.all(
+    buckets.map((bucket) => fetchArchive(username, bucket.year, bucket.month)),
+  );
+  const filtered = archives
+    .flat()
+    .filter((game) => Number(game?.end_time) >= startSec && Number(game?.end_time) <= endSec);
+  return extractGames(filtered, username, mode, Number.POSITIVE_INFINITY);
 }
 
 export async function fetchLastGame(username, mode = 'rapid') {
