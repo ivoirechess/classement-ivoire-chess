@@ -55,6 +55,26 @@
       <div id="status" class="status info">Chargement des données…</div>
       <div id="offline-banner" class="status error hidden">Mode dégradé : problème réseau ou API Chess.com indisponible.</div>
 
+      <div class="section-label">Activité récente</div>
+      <section id="activity-feed" class="ranking-list" aria-live="polite"></section>
+
+      <!-- PODIUM -->
+      <div class="section-label">Podium</div>
+      <div id="top-three" class="top-three"></div>
+
+      <!-- RANKING -->
+      <div class="section-label">Classement complet</div>
+      <div class="ranking-head" role="row">
+        <button type="button" class="sort-head" data-sort="rank" aria-label="Trier par rang">Rang <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="player" aria-label="Trier par joueur">Joueur <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="rating" aria-label="Trier par Elo courant">Elo <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="referenceRating" aria-label="Trier par Elo de référence du mois">Réf. mois <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="monthlyProgress" aria-label="Trier par progression mensuelle">Progr. <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" data-sort="games" aria-label="Trier par nombre de parties">Parties <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" disabled aria-label="Dernière partie">Dernière partie</button>
+      </div>
+      <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
+
       <div class="section-label">Insights récompenses</div>
       <section class="insights-grid" aria-label="Insights des récompenses mensuelles">
         <article class="insight-card insight-card-countdown">
@@ -78,26 +98,6 @@
 
       <div class="section-label">Le club en chiffres</div>
       <section id="club-stats-section" class="stats-grid" aria-label="Statistiques globales du club"></section>
-
-      <div class="section-label">Activité récente</div>
-      <section id="activity-feed" class="ranking-list" aria-live="polite"></section>
-
-      <!-- PODIUM -->
-      <div class="section-label">Podium</div>
-      <div id="top-three" class="top-three"></div>
-
-      <!-- RANKING -->
-      <div class="section-label">Classement complet</div>
-      <div class="ranking-head" role="row">
-        <button type="button" class="sort-head" data-sort="rank" aria-label="Trier par rang">Rang <span class="sort-arrow" aria-hidden="true"></span></button>
-        <button type="button" class="sort-head" data-sort="player" aria-label="Trier par joueur">Joueur <span class="sort-arrow" aria-hidden="true"></span></button>
-        <button type="button" class="sort-head" data-sort="rating" aria-label="Trier par Elo courant">Elo <span class="sort-arrow" aria-hidden="true"></span></button>
-        <button type="button" class="sort-head" data-sort="referenceRating" aria-label="Trier par Elo de référence du mois">Réf. mois <span class="sort-arrow" aria-hidden="true"></span></button>
-        <button type="button" class="sort-head" data-sort="monthlyProgress" aria-label="Trier par progression mensuelle">Progr. <span class="sort-arrow" aria-hidden="true"></span></button>
-        <button type="button" class="sort-head" data-sort="games" aria-label="Trier par nombre de parties">Parties <span class="sort-arrow" aria-hidden="true"></span></button>
-        <button type="button" class="sort-head" disabled aria-label="Dernière partie">Dernière partie</button>
-      </div>
-      <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
 
     </section>
 
