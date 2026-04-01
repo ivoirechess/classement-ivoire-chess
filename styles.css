@@ -828,18 +828,36 @@ a:hover { color: var(--gold); text-decoration: underline; }
   .header { flex-direction: column; align-items: flex-start; gap: 16px; }
   .header-actions { justify-content: flex-start; }
   .search-input { width: 100%; }
+
+  /* Mobile: conserver l'ordre podium 2-1-3 tout en gardant l'effet visuel */
   .top-three {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    min-height: unset;
-    align-items: unset;
-    padding-top: 0;
+    gap: 8px;
+    min-height: 240px;
+    padding-top: 8px;
   }
-  .podium-col { max-width: 100%; }
-  .podium-col.rank-1 .podium-step,
-  .podium-col.rank-2 .podium-step,
-  .podium-col.rank-3 .podium-step { display: none; }
+  .podium-col {
+    max-width: none;
+    min-width: 0;
+  }
+  .podium-card {
+    padding: 10px 8px;
+  }
+  .podium-card .avatar { width: 40px; height: 40px; margin-bottom: 8px; }
+  .podium-col.rank-1 .podium-card .avatar { width: 46px; height: 46px; }
+  .podium-card .player-name { font-size: 12px; }
+  .podium-col.rank-1 .podium-card .player-name { font-size: 13px; }
+  .podium-card .player-username,
+  .podium-card .player-submetric { font-size: 9px; }
+  .podium-card .player-rating { font-size: 15px; }
+  .podium-col.rank-1 .podium-card .player-rating { font-size: 17px; }
+  .podium-card .podium-badge { font-size: 9px; padding: 3px 6px; margin-bottom: 8px; }
+
+  .podium-col .podium-step { margin-top: 6px; }
+  .podium-col.rank-1 .podium-step { height: 52px; }
+  .podium-col.rank-2 .podium-step { height: 34px; }
+  .podium-col.rank-3 .podium-step { height: 24px; }
+  .podium-rank-label { font-size: 18px; bottom: 6px; }
+  .podium-col.rank-1 .podium-rank-label { font-size: 24px; }
 }
 @media (max-width: 660px) {
   .ranking-head { display: none; }
