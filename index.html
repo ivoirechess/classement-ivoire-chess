@@ -44,6 +44,7 @@
           </div>
           <input id="search-input" class="search-input" type="search" placeholder="Rechercher un joueur…" aria-label="Rechercher un joueur" />
           <button id="compare-btn" class="btn btn-violet" type="button">⚔ Comparer</button>
+          <button id="announcements-btn" class="btn btn-annonces" type="button" aria-haspopup="dialog" aria-controls="announcements-modal">📣 Annonces</button>
         </div>
         <div class="toolbar-end">
           <p class="sort-hint">Cliquez sur les colonnes pour trier</p>
@@ -98,11 +99,6 @@
       </div>
       <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
 
-      <div class="section-label">Ring Chess 🥊</div>
-      <section id="matches-section" class="ranking-list" aria-live="polite"></section>
-
-      <div class="section-label">Tournois</div>
-      <section id="tournaments-section" class="ranking-list" aria-live="polite"></section>
     </section>
 
     <!-- ADMIN PANEL -->
@@ -287,6 +283,21 @@
         <button id="confirm-submit-btn" class="btn" type="submit">Confirmer</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- ANNOUNCEMENTS MODAL -->
+  <dialog id="announcements-modal" class="modal modal-large">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Annonces du club</h3>
+        <button class="icon-btn" type="button" data-close="announcements-modal" aria-label="Fermer">✕</button>
+      </div>
+      <div class="section-label">Ring Chess 🥊</div>
+      <section id="matches-section" class="ranking-list" aria-live="polite"></section>
+
+      <div class="section-label">Tournois à venir</div>
+      <section id="tournaments-section" class="ranking-list" aria-live="polite"></section>
+    </div>
   </dialog>
 
   <script type="module" src="app.js"></script>

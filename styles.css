@@ -204,6 +204,25 @@ h1 {
   box-shadow: 0 3px 12px rgba(184, 144, 10, 0.15);
 }
 
+.btn-annonces {
+  position: relative;
+  background: linear-gradient(135deg, #d4a820, #b8900a);
+  border-color: rgba(138, 106, 5, 0.75);
+  color: #fff8e8;
+  box-shadow: 0 8px 20px rgba(184, 144, 10, 0.28);
+  animation: annonces-pulse 2.1s ease-in-out infinite;
+}
+.btn-annonces:hover {
+  background: linear-gradient(135deg, #e3b936, #c79a10);
+  border-color: rgba(138, 106, 5, 0.95);
+  box-shadow: 0 10px 24px rgba(184, 144, 10, 0.38);
+}
+
+@keyframes annonces-pulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
 .btn-ghost {
   background: rgba(0,0,0,0.03); border-color: var(--border); color: var(--text-2);
 }
