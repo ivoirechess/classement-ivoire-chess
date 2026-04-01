@@ -36,6 +36,21 @@ async function fetchJson(url) {
   return response.json();
 }
 
+async function fetchArchiveList(username) {
+  if (!username) return [];
+  const key = `archives:${safeUsername(username)}`;
+  try {
+    const payload = await cachedFetch(
+      key,
+      () => fetchJson(`${CHESS_API_BASE}/${safeUsername(username)}/games/archives`),
+      60 * 60 * 1000,
+    );
+    return Array.isArray(payload?.archives) ? payload.archives : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchPlayerProfile(username) {
   if (!username) return null;
   const key = `profile:${safeUsername(username)}`;
@@ -373,6 +388,26 @@ export async function fetchGamesInDateRange(username, mode = 'rapid', options = 
     .flat()
     .filter((game) => Number(game?.end_time) >= startSec && Number(game?.end_time) <= endSec);
   return extractGames(filtered, username, mode, Number.POSITIVE_INFINITY);
+}
+
+export async function fetchAllGamesForMode(username, mode = 'rapid') {
+  if (!username) return [];
+  const archives = await fetchArchiveList(username);
+  if (!archives.length) return [];
+
+  const buckets = archives
+    .map((url) => {
+      const match = String(url).match(/\/games\/(\d{4})\/(\d{2})$/);
+      if (!match) return null;
+      return { year: Number(match[1]), month: Number(match[2]) };
+    })
+    .filter(Boolean);
+
+  if (!buckets.length) return [];
+  const raw = await Promise.all(
+    buckets.map((bucket) => fetchArchive(username, bucket.year, bucket.month)),
+  );
+  return extractGames(raw.flat(), username, mode, Number.POSITIVE_INFINITY);
 }
 
 export async function fetchLastGame(username, mode = 'rapid') {

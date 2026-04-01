@@ -4,7 +4,7 @@ import {
   fetchRecentArchives,
   fetchMonthlyContext,
   fetchMonthlyGames,
-  fetchGamesInDateRange,
+  fetchAllGamesForMode,
   fetchPlayerProfile,
   fetchPlayerStats,
   topOpeningsFromGames,
@@ -729,6 +729,32 @@ function summarizeHeadToHead(gamesA = [], usernameA = '', usernameB = '', limit 
   return { ...total, usernameA, usernameB };
 }
 
+function buildHeadToHeadOverview(leftStats, rightStats) {
+  const totalGames = Number(leftStats?.total || 0);
+  if (!totalGames) {
+    return {
+      totalGames: 0,
+      drawRate: '0%',
+      decisiveRate: '0%',
+      leftShare: '0%',
+      rightShare: '0%',
+    };
+  }
+
+  const drawRate = Math.round(((Number(leftStats.draw || 0)) / totalGames) * 100);
+  const decisiveRate = 100 - drawRate;
+  const leftShare = Math.round(((Number(leftStats.win || 0)) / totalGames) * 100);
+  const rightShare = Math.round(((Number(rightStats.win || 0)) / totalGames) * 100);
+
+  return {
+    totalGames,
+    drawRate: `${drawRate}%`,
+    decisiveRate: `${decisiveRate}%`,
+    leftShare: `${leftShare}%`,
+    rightShare: `${rightShare}%`,
+  };
+}
+
 function buildComparisonChart(pointsA = [], pointsB = [], playerA, playerB) {
   const width = 900;
   const height = 180;
@@ -832,13 +858,10 @@ async function runCompareAnalysis() {
 
   const leftProgress = leftCtx.isInactive || leftCtx.referenceRating === null ? null : Number(leftRating.rating || 0) - Number(leftCtx.referenceRating || 0);
   const rightProgress = rightCtx.isInactive || rightCtx.referenceRating === null ? null : Number(rightRating.rating || 0) - Number(rightCtx.referenceRating || 0);
-  const refOptions = buildRefOptions();
-  const leftGames = Object.keys(refOptions).length
-    ? await fetchGamesInDateRange(left.username_chesscom, mode, refOptions)
-    : await fetchMonthlyGames(left.username_chesscom, leftCtx.currentGames?.length ? leftCtx.currentGames : null, mode);
-  const rightGames = Object.keys(refOptions).length
-    ? await fetchGamesInDateRange(right.username_chesscom, mode, refOptions)
-    : await fetchMonthlyGames(right.username_chesscom, rightCtx.currentGames?.length ? rightCtx.currentGames : null, mode);
+  const [leftGames, rightGames] = await Promise.all([
+    fetchAllGamesForMode(left.username_chesscom, mode),
+    fetchAllGamesForMode(right.username_chesscom, mode),
+  ]);
   const leftOpenings = topOpeningsFromGames(leftGames);
   const rightOpenings = topOpeningsFromGames(rightGames);
   const [leftTrend, rightTrend] = await Promise.all([
@@ -873,9 +896,24 @@ async function runCompareAnalysis() {
     <tr><td>${escapeHtml(left.display_name)}</td><td>${leftStats.win}</td><td>${leftStats.draw}</td><td>${leftStats.loss}</td><td>${leftStats.total}</td></tr>
     <tr><td>${escapeHtml(right.display_name)}</td><td>${rightStats.win}</td><td>${rightStats.draw}</td><td>${rightStats.loss}</td><td>${rightStats.total}</td></tr>
   `;
+  const h2hOverviewMarkup = (leftStats, rightStats, title) => {
+    const overview = buildHeadToHeadOverview(leftStats, rightStats);
+    return `
+      <div class="h2h-stats-block">
+        <p class="section-label">${title}</p>
+        <div class="compare-mini-stats">
+          <div class="mini-stat"><span class="mini-stat-label">Parties</span><strong class="mini-stat-value">${overview.totalGames}</strong></div>
+          <div class="mini-stat"><span class="mini-stat-label">Nulles</span><strong class="mini-stat-value">${overview.drawRate}</strong></div>
+          <div class="mini-stat"><span class="mini-stat-label">Décisives</span><strong class="mini-stat-value">${overview.decisiveRate}</strong></div>
+          <div class="mini-stat"><span class="mini-stat-label">${escapeHtml(left.display_name)}</span><strong class="mini-stat-value">${overview.leftShare}</strong></div>
+          <div class="mini-stat"><span class="mini-stat-label">${escapeHtml(right.display_name)}</span><strong class="mini-stat-value">${overview.rightShare}</strong></div>
+        </div>
+      </div>
+    `;
+  };
 
   const h2hMarkup = leftH2hRecent.total === 0 && rightH2hRecent.total === 0
-    ? '<p class="empty-state">Aucune confrontation sur la période sélectionnée.</p>'
+    ? '<p class="empty-state">Aucune confrontation trouvée sur cette cadence.</p>'
     : `
       <div class="compare-h2h-split">
         <p class="section-label" style="margin-top:0;">8 dernières confrontations</p>
@@ -883,11 +921,13 @@ async function runCompareAnalysis() {
           <thead><tr><th>Joueur</th><th>V</th><th>N</th><th>D</th><th>Total</th></tr></thead>
           <tbody>${h2hRowsMarkup(leftH2hRecent, rightH2hRecent)}</tbody>
         </table>
+        ${h2hOverviewMarkup(leftH2hRecent, rightH2hRecent, 'Stats section · 8 dernières parties')}
         <p class="section-label">Historique total</p>
         <table class="compare-h2h-table">
           <thead><tr><th>Joueur</th><th>V</th><th>N</th><th>D</th><th>Total</th></tr></thead>
           <tbody>${h2hRowsMarkup(leftH2hTotal, rightH2hTotal)}</tbody>
         </table>
+        ${h2hOverviewMarkup(leftH2hTotal, rightH2hTotal, 'Stats section · Toutes les confrontations')}
       </div>`;
 
   const markup = `
