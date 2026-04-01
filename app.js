@@ -1337,6 +1337,16 @@ function toggleAdminPanel() {
   els.adminToggleIcon.textContent = state.isAdminCollapsed ? '▸' : '▾';
 }
 
+function onAdminShortcut(event) {
+  const button = event.target.closest('button[data-scroll-target]');
+  if (!button) return;
+  const targetId = button.dataset.scrollTarget;
+  if (!targetId) return;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function ensureSession() {
   const { data } = await supabase.auth.getSession();
   state.session = data.session;
@@ -1803,6 +1813,7 @@ function bindEvents() {
   els.adminLoginBtn.addEventListener('click', () => els.loginModal.showModal());
   els.logoutBtn.addEventListener('click', logoutAdmin);
   els.adminToggle.addEventListener('click', toggleAdminPanel);
+  els.adminContent?.addEventListener('click', onAdminShortcut);
   els.loginForm.addEventListener('submit', loginAdmin);
   els.addPlayerForm.addEventListener('submit', addPlayer);
   els.addMatchForm?.addEventListener('submit', addMatch);
