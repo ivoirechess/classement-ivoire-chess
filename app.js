@@ -1200,7 +1200,7 @@ function playerByUsername(username) {
 function renderMatches() {
   if (!els.matchesSection) return;
   if (!state.matches.length) {
-    els.matchesSection.innerHTML = '<p class="empty-state">Aucun match annoncé.</p>';
+    els.matchesSection.innerHTML = '<p class="empty-state">Aucun ring chess annoncé.</p>';
     return;
   }
   els.matchesSection.innerHTML = state.matches.map((match) => {
@@ -1217,7 +1217,7 @@ function renderMatches() {
             ${avatarMarkup(profile1.avatar, p1?.display_name || match.player1_username, match.player1_username)}
             <div><p class="player-name">${escapeHtml(p1?.display_name || match.player1_username)}</p><p class="player-username">@${escapeHtml(match.player1_username)}</p></div>
           </div>
-          <p class="match-vs">VS</p>
+          <p class="match-vs">🥊 VS 🥊</p>
           <div class="match-player" data-player="${p2?.id || ''}">
             ${avatarMarkup(profile2.avatar, p2?.display_name || match.player2_username, match.player2_username)}
             <div><p class="player-name">${escapeHtml(p2?.display_name || match.player2_username)}</p><p class="player-username">@${escapeHtml(match.player2_username)}</p></div>
@@ -1266,7 +1266,7 @@ function renderAdminMatches() {
   els.adminMatchList.innerHTML = state.matches.map((match) => `
     <li class="player-item" data-id="${match.id}">
       <div>
-        <strong>${match.player1_username} vs ${match.player2_username}</strong><br>
+        <strong>🥊 ${match.player1_username} vs ${match.player2_username}</strong><br>
         <small>${formatDateFr(match.match_date)} · ${match.format}</small>
       </div>
       <div class="player-actions">
@@ -1329,6 +1329,11 @@ async function loginAdmin(event) {
   }
 
   await ensureSession();
+  state.isAdminCollapsed = false;
+  els.adminContent?.classList.remove('collapsed');
+  els.adminToggle?.setAttribute('aria-expanded', 'true');
+  if (els.adminToggleIcon) els.adminToggleIcon.textContent = '▾';
+  els.adminPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   els.loginModal.close();
   toast('Connexion admin réussie.', 'success');
 }
@@ -1438,7 +1443,7 @@ async function addMatch(event) {
   const matchDateRaw = document.getElementById('match-datetime')?.value || '';
   const format = document.getElementById('match-format')?.value?.trim() || '';
   if (!player1 || !player2 || player1 === player2 || !matchDateRaw || !format) {
-    setAdminStatus('error', 'Veuillez remplir correctement le formulaire de match.');
+    setAdminStatus('error', 'Veuillez remplir correctement le formulaire de ring chess.');
     return;
   }
   const { error } = await supabase.from('club_matches').insert({
@@ -1449,10 +1454,10 @@ async function addMatch(event) {
     status: 'upcoming',
   });
   if (error) {
-    setAdminStatus('error', `Annonce match refusée: ${error.message}`);
+    setAdminStatus('error', `Annonce ring chess refusée: ${error.message}`);
     return;
   }
-  setAdminStatus('success', 'Match annoncé.');
+  setAdminStatus('success', 'Ring chess annoncé.');
   event.target.reset();
 }
 
@@ -1698,7 +1703,7 @@ async function onAdminMatchAction(event) {
     return;
   }
   if (button.dataset.action === 'complete-match') {
-    const result = window.prompt('Résultat du match (ex: 1-0, 0.5-0.5)', '1-0');
+    const result = window.prompt('Résultat du ring chess (ex: 1-0, 0.5-0.5)', '1-0');
     if (result === null) return;
     const { error } = await supabase.from('club_matches').update({ status: 'completed', result: result.trim() }).eq('id', id);
     if (error) toast(`Mise à jour impossible: ${error.message}`, 'error');
