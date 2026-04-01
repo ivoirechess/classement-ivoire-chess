@@ -716,10 +716,10 @@ function comparePlayerOptionsMarkup(selectedId) {
 function summarizeHeadToHead(gamesA = [], usernameA = '', usernameB = '', limit = 8) {
   const target = String(usernameB || '').toLowerCase();
   const scopedGames = gamesA
-    .filter((game) => String(game.opponent || '').toLowerCase() === target)
-    .slice(0, limit);
+    .filter((game) => String(game.opponent || '').toLowerCase() === target);
+  const selectedGames = Number.isFinite(limit) ? scopedGames.slice(0, limit) : scopedGames;
   const total = { win: 0, draw: 0, loss: 0, total: 0 };
-  scopedGames.forEach((game) => {
+  selectedGames.forEach((game) => {
     const kind = classifyResult(game.result);
     if (kind === 'win') total.win += 1;
     else if (kind === 'draw') total.draw += 1;
@@ -845,12 +845,21 @@ async function runCompareAnalysis() {
     fetchRecentArchives(left.username_chesscom, mode, 3),
     fetchRecentArchives(right.username_chesscom, mode, 3),
   ]);
-  const leftH2h = summarizeHeadToHead(leftGames, left.username_chesscom, right.username_chesscom, 8);
-  const rightH2h = {
-    win: leftH2h.loss,
-    draw: leftH2h.draw,
-    loss: leftH2h.win,
-    total: leftH2h.total,
+  const leftH2hRecent = summarizeHeadToHead(leftGames, left.username_chesscom, right.username_chesscom, 8);
+  const leftH2hTotal = summarizeHeadToHead(leftGames, left.username_chesscom, right.username_chesscom, Number.POSITIVE_INFINITY);
+  const rightH2hRecent = {
+    win: leftH2hRecent.loss,
+    draw: leftH2hRecent.draw,
+    loss: leftH2hRecent.win,
+    total: leftH2hRecent.total,
+    usernameA: right.username_chesscom,
+    usernameB: left.username_chesscom,
+  };
+  const rightH2hTotal = {
+    win: leftH2hTotal.loss,
+    draw: leftH2hTotal.draw,
+    loss: leftH2hTotal.win,
+    total: leftH2hTotal.total,
     usernameA: right.username_chesscom,
     usernameB: left.username_chesscom,
   };
@@ -860,16 +869,26 @@ async function runCompareAnalysis() {
     ? items.map((entry) => `<li class="opening-item"><span class="opening-name">${escapeHtml(shortOpening(entry.opening, 44))}</span><span class="opening-count">${entry.count}</span></li>`).join('')
     : '<li class="opening-item"><span class="opening-name">—</span></li>';
 
-  const h2hMarkup = leftH2h.total === 0 && rightH2h.total === 0
+  const h2hRowsMarkup = (leftStats, rightStats) => `
+    <tr><td>${escapeHtml(left.display_name)}</td><td>${leftStats.win}</td><td>${leftStats.draw}</td><td>${leftStats.loss}</td><td>${leftStats.total}</td></tr>
+    <tr><td>${escapeHtml(right.display_name)}</td><td>${rightStats.win}</td><td>${rightStats.draw}</td><td>${rightStats.loss}</td><td>${rightStats.total}</td></tr>
+  `;
+
+  const h2hMarkup = leftH2hRecent.total === 0 && rightH2hRecent.total === 0
     ? '<p class="empty-state">Aucune confrontation sur la période sélectionnée.</p>'
     : `
-      <table class="compare-h2h-table">
-        <thead><tr><th>Joueur</th><th>V</th><th>N</th><th>D</th><th>Total</th></tr></thead>
-        <tbody>
-          <tr><td>${escapeHtml(left.display_name)}</td><td>${leftH2h.win}</td><td>${leftH2h.draw}</td><td>${leftH2h.loss}</td><td>${leftH2h.total}</td></tr>
-          <tr><td>${escapeHtml(right.display_name)}</td><td>${rightH2h.win}</td><td>${rightH2h.draw}</td><td>${rightH2h.loss}</td><td>${rightH2h.total}</td></tr>
-        </tbody>
-      </table>`;
+      <div class="compare-h2h-split">
+        <p class="section-label" style="margin-top:0;">8 dernières confrontations</p>
+        <table class="compare-h2h-table">
+          <thead><tr><th>Joueur</th><th>V</th><th>N</th><th>D</th><th>Total</th></tr></thead>
+          <tbody>${h2hRowsMarkup(leftH2hRecent, rightH2hRecent)}</tbody>
+        </table>
+        <p class="section-label">Historique total</p>
+        <table class="compare-h2h-table">
+          <thead><tr><th>Joueur</th><th>V</th><th>N</th><th>D</th><th>Total</th></tr></thead>
+          <tbody>${h2hRowsMarkup(leftH2hTotal, rightH2hTotal)}</tbody>
+        </table>
+      </div>`;
 
   const markup = `
     <div class="compare-grid-2">
@@ -901,7 +920,7 @@ async function runCompareAnalysis() {
       <article class="compare-card"><p class="section-label">Ouvertures préférées · ${escapeHtml(right.display_name)}</p><ul class="opening-list">${openingMarkup(rightOpenings)}</ul></article>
     </div>
     <article class="compare-card">
-      <p class="section-label">Face-à-face (8 dernières confrontations)</p>
+      <p class="section-label">Face-à-face</p>
       ${h2hMarkup}
     </article>
   `;
