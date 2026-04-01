@@ -4,6 +4,7 @@ import {
   fetchRecentArchives,
   fetchMonthlyContext,
   fetchMonthlyGames,
+  fetchGamesInDateRange,
   fetchPlayerProfile,
   fetchPlayerStats,
   topOpeningsFromGames,
@@ -712,11 +713,13 @@ function comparePlayerOptionsMarkup(selectedId) {
     .join('');
 }
 
-function summarizeHeadToHead(gamesA = [], usernameA = '', usernameB = '') {
+function summarizeHeadToHead(gamesA = [], usernameA = '', usernameB = '', limit = 8) {
   const target = String(usernameB || '').toLowerCase();
+  const scopedGames = gamesA
+    .filter((game) => String(game.opponent || '').toLowerCase() === target)
+    .slice(0, limit);
   const total = { win: 0, draw: 0, loss: 0, total: 0 };
-  gamesA.forEach((game) => {
-    if (String(game.opponent || '').toLowerCase() !== target) return;
+  scopedGames.forEach((game) => {
     const kind = classifyResult(game.result);
     if (kind === 'win') total.win += 1;
     else if (kind === 'draw') total.draw += 1;
@@ -829,16 +832,28 @@ async function runCompareAnalysis() {
 
   const leftProgress = leftCtx.isInactive || leftCtx.referenceRating === null ? null : Number(leftRating.rating || 0) - Number(leftCtx.referenceRating || 0);
   const rightProgress = rightCtx.isInactive || rightCtx.referenceRating === null ? null : Number(rightRating.rating || 0) - Number(rightCtx.referenceRating || 0);
-  const leftGames = await fetchMonthlyGames(left.username_chesscom, leftCtx.currentGames?.length ? leftCtx.currentGames : null, mode);
-  const rightGames = await fetchMonthlyGames(right.username_chesscom, rightCtx.currentGames?.length ? rightCtx.currentGames : null, mode);
+  const refOptions = buildRefOptions();
+  const leftGames = Object.keys(refOptions).length
+    ? await fetchGamesInDateRange(left.username_chesscom, mode, refOptions)
+    : await fetchMonthlyGames(left.username_chesscom, leftCtx.currentGames?.length ? leftCtx.currentGames : null, mode);
+  const rightGames = Object.keys(refOptions).length
+    ? await fetchGamesInDateRange(right.username_chesscom, mode, refOptions)
+    : await fetchMonthlyGames(right.username_chesscom, rightCtx.currentGames?.length ? rightCtx.currentGames : null, mode);
   const leftOpenings = topOpeningsFromGames(leftGames);
   const rightOpenings = topOpeningsFromGames(rightGames);
   const [leftTrend, rightTrend] = await Promise.all([
     fetchRecentArchives(left.username_chesscom, mode, 3),
     fetchRecentArchives(right.username_chesscom, mode, 3),
   ]);
-  const leftH2h = summarizeHeadToHead(leftGames, left.username_chesscom, right.username_chesscom);
-  const rightH2h = summarizeHeadToHead(rightGames, right.username_chesscom, left.username_chesscom);
+  const leftH2h = summarizeHeadToHead(leftGames, left.username_chesscom, right.username_chesscom, 8);
+  const rightH2h = {
+    win: leftH2h.loss,
+    draw: leftH2h.draw,
+    loss: leftH2h.win,
+    total: leftH2h.total,
+    usernameA: right.username_chesscom,
+    usernameB: left.username_chesscom,
+  };
   const best = Number(leftRating.rating || 0) === Number(rightRating.rating || 0) ? '' : (Number(leftRating.rating || 0) > Number(rightRating.rating || 0) ? 'left' : 'right');
 
   const openingMarkup = (items) => items.length
@@ -846,7 +861,7 @@ async function runCompareAnalysis() {
     : '<li class="opening-item"><span class="opening-name">—</span></li>';
 
   const h2hMarkup = leftH2h.total === 0 && rightH2h.total === 0
-    ? '<p class="empty-state">Aucune confrontation ce mois.</p>'
+    ? '<p class="empty-state">Aucune confrontation sur la période sélectionnée.</p>'
     : `
       <table class="compare-h2h-table">
         <thead><tr><th>Joueur</th><th>V</th><th>N</th><th>D</th><th>Total</th></tr></thead>
@@ -886,7 +901,7 @@ async function runCompareAnalysis() {
       <article class="compare-card"><p class="section-label">Ouvertures préférées · ${escapeHtml(right.display_name)}</p><ul class="opening-list">${openingMarkup(rightOpenings)}</ul></article>
     </div>
     <article class="compare-card">
-      <p class="section-label">Face-à-face (mois en cours)</p>
+      <p class="section-label">Face-à-face (8 dernières confrontations)</p>
       ${h2hMarkup}
     </article>
   `;
