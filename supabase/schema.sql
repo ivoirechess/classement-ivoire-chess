@@ -89,52 +89,61 @@ alter table public.club_matches enable row level security;
 alter table public.club_tournaments enable row level security;
 
 -- Lecture publique
-create policy if not exists "players_public_read"
+drop policy if exists "players_public_read" on public.players;
+create policy "players_public_read"
 on public.players
 for select
 using (is_active = true);
 
-create policy if not exists "settings_public_read"
+drop policy if exists "settings_public_read" on public.app_settings;
+create policy "settings_public_read"
 on public.app_settings
 for select
 using (true);
 
-create policy if not exists "matches_public_read"
+drop policy if exists "matches_public_read" on public.club_matches;
+create policy "matches_public_read"
 on public.club_matches
 for select
 using (true);
 
-create policy if not exists "tournaments_public_read"
+drop policy if exists "tournaments_public_read" on public.club_tournaments;
+create policy "tournaments_public_read"
 on public.club_tournaments
 for select
 using (true);
 
 -- Ecriture admin uniquement
-create policy if not exists "players_admin_write"
+drop policy if exists "players_admin_write" on public.players;
+create policy "players_admin_write"
 on public.players
 for all
 using (public.is_admin())
 with check (public.is_admin());
 
-create policy if not exists "settings_admin_write"
+drop policy if exists "settings_admin_write" on public.app_settings;
+create policy "settings_admin_write"
 on public.app_settings
 for all
 using (public.is_admin())
 with check (public.is_admin());
 
-create policy if not exists "matches_admin_write"
+drop policy if exists "matches_admin_write" on public.club_matches;
+create policy "matches_admin_write"
 on public.club_matches
 for all
 using (public.is_admin())
 with check (public.is_admin());
 
-create policy if not exists "tournaments_admin_write"
+drop policy if exists "tournaments_admin_write" on public.club_tournaments;
+create policy "tournaments_admin_write"
 on public.club_tournaments
 for all
 using (public.is_admin())
 with check (public.is_admin());
 
-create policy if not exists "admins_self_read"
+drop policy if exists "admins_self_read" on public.app_admins;
+create policy "admins_self_read"
 on public.app_admins
 for select
 using (auth.uid() = user_id);
