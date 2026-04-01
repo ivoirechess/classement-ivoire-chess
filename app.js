@@ -126,8 +126,10 @@ const els = {
   playerModal: document.getElementById('player-modal'),
   playerModalBody: document.getElementById('player-modal-body'),
   compareBtn: document.getElementById('compare-btn'),
+  announcementsBtn: document.getElementById('announcements-btn'),
   compareModal: document.getElementById('compare-modal'),
   compareModalBody: document.getElementById('compare-modal-body'),
+  announcementsModal: document.getElementById('announcements-modal'),
   confirmModal: document.getElementById('confirm-modal'),
   confirmText: document.getElementById('confirm-text'),
   confirmForm: document.getElementById('confirm-form'),
@@ -1266,11 +1268,12 @@ function renderMatches() {
 
 function renderTournaments() {
   if (!els.tournamentsSection) return;
-  if (!state.tournaments.length) {
+  const visibleTournaments = state.tournaments.filter((tournament) => tournament.status !== 'completed');
+  if (!visibleTournaments.length) {
     els.tournamentsSection.innerHTML = '<p class="empty-state">Aucun tournoi annoncé.</p>';
     return;
   }
-  els.tournamentsSection.innerHTML = state.tournaments.map((tournament) => {
+  els.tournamentsSection.innerHTML = visibleTournaments.map((tournament) => {
     const dateValue = `${tournament.tournament_date}T12:00:00Z`;
     const liveStatus = tournament.status === 'upcoming' && new Date(dateValue).getTime() <= Date.now() ? 'ongoing' : tournament.status;
     const isOnline = String(tournament.location || '').toLowerCase().includes('ligne');
@@ -1809,6 +1812,11 @@ function bindEvents() {
     if (!state.compare.rightId) state.compare.rightId = state.players[1]?.id || state.players[0]?.id || null;
     renderCompareModal();
     els.compareModal?.showModal();
+  });
+  els.announcementsBtn?.addEventListener('click', () => {
+    renderMatches();
+    renderTournaments();
+    els.announcementsModal?.showModal();
   });
   els.adminLoginBtn.addEventListener('click', () => els.loginModal.showModal());
   els.logoutBtn.addEventListener('click', logoutAdmin);
