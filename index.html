@@ -31,6 +31,8 @@
       </div>
     </header>
 
+    <blockquote id="chess-quote">« Les échecs sont avant tout une question de combativité. » — Garry Kasparov</blockquote>
+
     <!-- MAIN CARD -->
     <section class="card">
       <div class="toolbar">
@@ -41,6 +43,7 @@
             <button class="tab" data-mode="bullet">Bullet</button>
           </div>
           <input id="search-input" class="search-input" type="search" placeholder="Rechercher un joueur…" aria-label="Rechercher un joueur" />
+          <button id="compare-btn" class="btn btn-violet" type="button">⚔ Comparer</button>
         </div>
         <div class="toolbar-end">
           <p class="sort-hint">Cliquez sur les colonnes pour trier</p>
@@ -72,6 +75,12 @@
         </article>
       </section>
 
+      <div class="section-label">Le club en chiffres</div>
+      <section id="club-stats-section" class="stats-grid" aria-label="Statistiques globales du club"></section>
+
+      <div class="section-label">Activité récente</div>
+      <section id="activity-feed" class="ranking-list" aria-live="polite"></section>
+
       <!-- PODIUM -->
       <div class="section-label">Podium</div>
       <div id="top-three" class="top-three"></div>
@@ -85,8 +94,15 @@
         <button type="button" class="sort-head" data-sort="referenceRating" aria-label="Trier par Elo de référence du mois">Réf. mois <span class="sort-arrow" aria-hidden="true"></span></button>
         <button type="button" class="sort-head" data-sort="monthlyProgress" aria-label="Trier par progression mensuelle">Progr. <span class="sort-arrow" aria-hidden="true"></span></button>
         <button type="button" class="sort-head" data-sort="games" aria-label="Trier par nombre de parties">Parties <span class="sort-arrow" aria-hidden="true"></span></button>
+        <button type="button" class="sort-head" disabled aria-label="Dernière partie">Dernière partie</button>
       </div>
       <div id="ranking-list" class="ranking-list" aria-live="polite"></div>
+
+      <div class="section-label">Matchs du club</div>
+      <section id="matches-section" class="ranking-list" aria-live="polite"></section>
+
+      <div class="section-label">Tournois</div>
+      <section id="tournaments-section" class="ranking-list" aria-live="polite"></section>
     </section>
 
     <!-- ADMIN PANEL -->
@@ -132,11 +148,78 @@
           <label>Date + heure prochaine récompense
             <input id="reward-next-at-input" type="datetime-local" required />
           </label>
+          <div class="panel-grid" style="grid-column: 1 / -1;">
+            <label style="text-transform:none;letter-spacing:0;">
+              <input type="radio" name="ref-date-mode" value="auto" checked />
+              Automatique (1ère partie du mois courant ou M−1)
+            </label>
+            <label style="text-transform:none;letter-spacing:0;">
+              <input type="radio" name="ref-date-mode" value="manual" />
+              Manuel
+            </label>
+            <div id="ref-date-manual-fields" class="panel-inline hidden">
+              <label>Date de début
+                <input id="ref-date-start-input" type="date" />
+              </label>
+              <label>Date de fin
+                <input id="ref-date-end-input" type="date" />
+              </label>
+            </div>
+          </div>
           <button class="btn btn-violet" type="submit">Mettre à jour les récompenses</button>
         </form>
 
         <h3>Joueurs actifs</h3>
         <ul id="admin-player-list" class="player-list"></ul>
+
+        <h3>Annoncer un match 1v1</h3>
+        <form id="add-match-form" class="panel-grid">
+          <label>Joueur 1
+            <select id="match-player1" required></select>
+          </label>
+          <label>Joueur 2
+            <select id="match-player2" required></select>
+          </label>
+          <label>Date et heure
+            <input id="match-datetime" type="datetime-local" required />
+          </label>
+          <label>Format
+            <input id="match-format" type="text" placeholder="Rapide 10+0" required />
+          </label>
+          <button class="btn btn-violet" type="submit">Annoncer le match</button>
+        </form>
+        <ul id="admin-match-list" class="player-list"></ul>
+
+        <h3>Annoncer un tournoi</h3>
+        <form id="add-tournament-form" class="panel-grid">
+          <label>Titre
+            <input id="tournament-title" type="text" required />
+          </label>
+          <label>Date
+            <input id="tournament-date" type="date" required />
+          </label>
+          <label>Format
+            <input id="tournament-format" type="text" required />
+          </label>
+          <label>Lieu
+            <input id="tournament-location" type="text" required placeholder="En ligne / Abidjan" />
+          </label>
+          <label>Description (optionnel)
+            <textarea id="tournament-description" rows="3" placeholder="Détails du tournoi"></textarea>
+          </label>
+          <label>Lien externe (optionnel)
+            <input id="tournament-link" type="url" placeholder="https://..." />
+          </label>
+          <label>Statut
+            <select id="tournament-status" required>
+              <option value="upcoming">À venir</option>
+              <option value="ongoing">En cours</option>
+              <option value="completed">Terminé</option>
+            </select>
+          </label>
+          <button class="btn btn-violet" type="submit">Annoncer le tournoi</button>
+        </form>
+        <ul id="admin-tournament-list" class="player-list"></ul>
       </div>
     </section>
 
@@ -172,6 +255,17 @@
         <button class="icon-btn" type="button" data-close="player-modal" aria-label="Fermer">✕</button>
       </div>
       <div id="player-modal-body"></div>
+    </div>
+  </dialog>
+
+  <!-- COMPARE MODAL -->
+  <dialog id="compare-modal" class="modal modal-large">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Comparaison de joueurs</h3>
+        <button class="icon-btn" type="button" data-close="compare-modal" aria-label="Fermer">✕</button>
+      </div>
+      <div id="compare-modal-body"></div>
     </div>
   </dialog>
 
