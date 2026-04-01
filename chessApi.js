@@ -64,6 +64,10 @@ function currentAndPrevMonth() {
   };
 }
 
+function isFirstDayOfMonthUtc(now = new Date()) {
+  return now.getUTCDate() === 1;
+}
+
 /**
  * Depuis une liste de parties brutes de l'API Chess.com,
  * retourne l'Elo du joueur sur la PREMIÈRE partie dans la cadence donnée
@@ -117,13 +121,23 @@ export async function fetchMonthlyContext(username, mode) {
   // On charge le mois courant dans tous les cas (nécessaire pour les parties récentes)
   const currentGames = await fetchArchive(username, current.year, current.month);
 
-  // Tentative 1 : Elo de la 1ère partie du mois courant
-  let referenceRating = firstRatingFromGames(currentGames, username, mode);
+  const shouldKeepPreviousMonthReference = isFirstDayOfMonthUtc();
+  let referenceRating = null;
 
-  if (referenceRating === null) {
-    // Tentative 2 : Elo de la 1ère partie de M-1
+  if (shouldKeepPreviousMonthReference) {
+    // Le 1er jour du mois, on maintient la référence de M-1
+    // pour conserver la progression affichée des récompenses.
     const prevGames = await fetchArchive(username, prev.year, prev.month);
     referenceRating = firstRatingFromGames(prevGames, username, mode);
+  } else {
+    // Tentative 1 : Elo de la 1ère partie du mois courant
+    referenceRating = firstRatingFromGames(currentGames, username, mode);
+
+    if (referenceRating === null) {
+      // Tentative 2 : Elo de la 1ère partie de M-1
+      const prevGames = await fetchArchive(username, prev.year, prev.month);
+      referenceRating = firstRatingFromGames(prevGames, username, mode);
+    }
   }
 
   const isInactive = referenceRating === null;

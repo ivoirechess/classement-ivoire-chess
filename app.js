@@ -244,10 +244,22 @@ function computeNextRewardDate(now = new Date()) {
   }
 
   const fallback = new Date(now);
-  fallback.setHours(10, 0, 0, 0);
-  if (now.getDate() === 1 && now < fallback) return fallback;
-  fallback.setMonth(fallback.getMonth() + 1, 1);
+  fallback.setUTCHours(10, 0, 0, 0);
+  if (now.getUTCDate() === 1 && now < fallback) return fallback;
+  fallback.setUTCMonth(fallback.getUTCMonth() + 1, 1);
   return fallback;
+}
+
+function formatDateTimeGmt(date) {
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short',
+  });
 }
 
 function formatCountdown(diffMs) {
@@ -410,19 +422,13 @@ function updateRewardInsights() {
       if (els.insightCountdownSub) {
         const frozenAt = state.rewardSettings.frozenAt ? new Date(state.rewardSettings.frozenAt) : null;
         els.insightCountdownSub.textContent = frozenAt && !Number.isNaN(frozenAt.getTime())
-          ? `Lauréats verrouillés le ${frozenAt.toLocaleString('fr-FR')}`
+          ? `Lauréats verrouillés le ${formatDateTimeGmt(frozenAt)}`
           : 'Lauréats verrouillés jusqu’à la prochaine date de récompense';
       }
     } else {
-      els.insightCountdown.textContent = `${formatCountdown(diff)} · ${nextRewardDate.toLocaleString('fr-FR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`;
+      els.insightCountdown.textContent = `${formatCountdown(diff)} · ${formatDateTimeGmt(nextRewardDate)}`;
       if (els.insightCountdownSub) {
-        els.insightCountdownSub.textContent = 'Date et heure configurées par l\'admin';
+        els.insightCountdownSub.textContent = 'Date et heure de remise affichées en GMT (UTC)';
       }
     }
   }
