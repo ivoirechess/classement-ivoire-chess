@@ -1162,6 +1162,29 @@ a:hover { color: var(--gold); text-decoration: underline; }
   padding: 7px 8px;
   text-align: left;
 }
+.h2h-stats-block { margin-top: 10px; }
+.compare-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.mini-stat {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: rgba(255,255,255,0.72);
+  padding: 8px;
+}
+.mini-stat-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-2);
+}
+.mini-stat-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1.1;
+}
 
 .event-card {
   background: var(--surface-2);
