@@ -154,6 +154,7 @@ values
   ('top_limit', '20'),
   ('reward_top_amount', '10000'),
   ('reward_progress_amount', '5000'),
+  ('reward_enabled', '1'),
   ('reward_next_at', ''),
   ('ref_date_mode', 'auto'),
   ('ref_date_start', ''),
