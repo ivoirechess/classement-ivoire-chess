@@ -51,6 +51,7 @@ const state = {
   profilesByUser: new Map(),
   // Stocke { referenceRating, isInactive, currentGames } par username
   monthlyContextByUser: new Map(),
+  monthlyGamesCountByUser: new Map(),
   lastGameByUser: new Map(),
   rankingDeltaByUser: new Map(),
   baseOrderByUser: new Map(),
@@ -983,10 +984,12 @@ function getMergedRows() {
     };
     const monthlyProgress = computeMonthlyProgress(p.username_chesscom, ratingData.rating);
     const lastGame = state.lastGameByUser.get(p.username_chesscom) || null;
+    const monthlyGamesCount = Number(state.monthlyGamesCountByUser.get(p.username_chesscom) || 0);
 
     return {
       ...p,
       ...ratingData,
+      games: monthlyGamesCount,
       ...profile,
       referenceRating: ctx.referenceRating,
       isInactive: ctx.isInactive,
@@ -1165,9 +1168,11 @@ async function refreshRatings() {
         monthlyCtx?.currentGames?.length ? monthlyCtx.currentGames : null,
         state.mode,
       );
+      const monthlyGamesCount = Array.isArray(monthlyGames) ? monthlyGames.length : 0;
       state.ratingsByUser.set(player.username_chesscom, ratingData);
       state.profilesByUser.set(player.username_chesscom, profile || {});
       state.monthlyContextByUser.set(player.username_chesscom, monthlyCtx);
+      state.monthlyGamesCountByUser.set(player.username_chesscom, monthlyGamesCount);
       state.lastGameByUser.set(player.username_chesscom, monthlyGames[0] || null);
     } catch {
       // joueur ignoré sans bloquer les autres
